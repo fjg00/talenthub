@@ -352,5 +352,32 @@
     "candidateName": "Candidate",
     "viewCV": "View CV",
     "noCoverLetter": "No cover letter provided"
+  },
+  "ai": {
+    "matchScore": "AI Match Score",
+    "matchScoreDesc": "AI-powered compatibility score based on skills, experience, and job requirements",
+    "getMatchScore": "Get AI Score",
+    "strengths": "Strengths",
+    "gaps": "Gaps",
+    "aiSummary": "AI Summary",
+    "generateSummary": "Generate AI Summary",
+    "candidateSummary": "AI Candidate Intelligence",
+    "topSkills": "Top Skills",
+    "experienceLevel": "Experience Level",
+    "recommendation": "AI Recommendation",
+    "optimizeJob": "Optimize with AI",
+    "optimizeJobDesc": "Let AI improve your job description to attract better candidates",
+    "improvedDescription": "AI-Optimized Description",
+    "suggestedSkills": "Suggested Skills",
+    "tips": "Optimization Tips",
+    "applyOptimization": "Apply Suggestion",
+    "parseCV": "Extract from CV",
+    "parseCVDesc": "Paste your CV text and let AI auto-fill your profile",
+    "parseCVButton": "Extract & Fill Profile",
+    "parseCVPlaceholder": "Paste your CV/resume text here...",
+    "parseCVSuccess": "Profile updated with extracted data!",
+    "loading": "AI is thinking...",
+    "error": "AI analysis failed. Please try again.",
+    "poweredBy": "Powered by AI"
   }
 }

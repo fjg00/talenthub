@@ -6,9 +6,12 @@ import { User, FileText } from "lucide-react";
 import { ApplicationStatusBadge } from "./status-badge";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { useTransition } from "react";
+import { AIMatchScore } from "./ai-match-score";
+import { AICandidateSummary } from "./ai-candidate-summary";
 
 interface Applicant {
   id: string;
+  candidateId: string;
   coverLetter: string | null;
   cvUrl: string | null;
   status: string;
@@ -35,7 +38,7 @@ const statuses = [
   "hired",
 ] as const;
 
-export function ApplicantList({ applicants }: { applicants: Applicant[] }) {
+export function ApplicantList({ applicants, jobId }: { applicants: Applicant[]; jobId: string }) {
   const t = useTranslations("applications");
 
   if (applicants.length === 0) {
@@ -55,7 +58,7 @@ export function ApplicantList({ applicants }: { applicants: Applicant[] }) {
         {t("title")} ({applicants.length})
       </h2>
       {applicants.map((app, i) => (
-        <ApplicantCard key={app.id} applicant={app} index={i} />
+        <ApplicantCard key={app.id} applicant={app} index={i} jobId={jobId} />
       ))}
     </div>
   );
@@ -64,9 +67,11 @@ export function ApplicantList({ applicants }: { applicants: Applicant[] }) {
 function ApplicantCard({
   applicant,
   index,
+  jobId,
 }: {
   applicant: Applicant;
   index: number;
+  jobId: string;
 }) {
   const t = useTranslations("applications");
   const [isPending, startTransition] = useTransition();
@@ -119,6 +124,11 @@ function ApplicantCard({
               {applicant.coverLetter}
             </p>
           )}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <AIMatchScore applicationId={applicant.id} jobId={jobId} />
+            <AICandidateSummary candidateId={applicant.candidateId} />
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-2">

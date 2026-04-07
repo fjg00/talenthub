@@ -5,6 +5,7 @@ import { getJobById, getJobWithApplications, hasApplied } from "@/lib/dal/jobs";
 import { ApplicantList } from "@/components/dashboard/applicant-list";
 import { ApplyForm } from "@/components/dashboard/apply-form";
 import { JobStatusBadge } from "@/components/dashboard/status-badge";
+import { AIJobOptimizer } from "@/components/dashboard/ai-job-optimizer";
 import { getTranslations } from "next-intl/server";
 import { MapPin, Building2, Clock, Coins } from "lucide-react";
 
@@ -80,7 +81,9 @@ export default async function JobDetailPage({
           </div>
         )}
 
-        <ApplicantList applicants={job.applications} />
+        <AIJobOptimizer jobId={jobId} />
+
+        <ApplicantList applicants={job.applications} jobId={jobId} />
       </div>
     );
   }
