@@ -1,4 +1,4 @@
-import { ai, MODEL } from "./gemini";
+import { getAI, MODEL } from "./gemini";
 
 interface CandidateData {
   fullName: string;
@@ -61,7 +61,7 @@ Evaluate the match and respond with ONLY valid JSON (no markdown, no code fences
   "summary": "<1-2 sentence overall assessment>"
 }`;
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: MODEL,
     contents: prompt,
     config: {

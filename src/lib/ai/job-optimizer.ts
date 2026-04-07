@@ -1,4 +1,4 @@
-import { ai, MODEL } from "./gemini";
+import { getAI, MODEL } from "./gemini";
 
 interface JobInput {
   title: string;
@@ -35,7 +35,7 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   "tips": [<up to 3 short tips to improve this job posting>]
 }`;
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: MODEL,
     contents: prompt,
     config: {
