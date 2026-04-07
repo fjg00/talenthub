@@ -16,7 +16,20 @@
       "Bash(node -e \"const l = require\\(''lucide-react''\\); const matches = Object.keys\\(l\\).filter\\(k => k.toLowerCase\\(\\).includes\\(''linked''\\)\\); console.log\\(matches\\);\")",
       "Bash(gh auth:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(npx vercel:*)",
+      "Bash(wc -l /c/Users/fatim/Desktop/JOBSITE/messages/*.json)",
+      "Bash(node -e \"const z = require\\(''zod/v4''\\); console.log\\(''v4 works''\\)\")",
+      "Bash(node -e \"const z = require\\(''zod''\\); console.log\\(''zod version:'', z.z ? ''has z'' : ''no z''\\); console.log\\(typeof z.email\\)\")",
+      "Bash(node -e \"const pkg = require\\(''zod/package.json''\\); console.log\\(''zod version:'', pkg.version\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"require\\(''fs''\\).writeFileSync\\(''C:/Users/fatim/.claude/plans/effervescent-humming-muffin-agent-ad99ae7086d9b8acf.md'', ''test''\\); console.log\\(''ok''\\)\")",
+      "Bash(node -e:*)",
+      "Bash(npx next:*)",
+      "Bash(find /c/Users/fatim/Desktop/JOBSITE/src/app/[locale]/\\\\\\(marketing\\\\\\) -type f -name \"*.tsx\")",
+      "Bash(find /c/Users/fatim/Desktop/JOBSITE -name .env* -o -name env.*)"
     ]
   }
 }
