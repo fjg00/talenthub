@@ -89,7 +89,7 @@ function JobCard({ job, index }: { job: Job & { applications: { id: string }[] }
             {job.jobType && <span>{t(job.jobType)}</span>}
             <span>
               {t("postedOn")}{" "}
-              {new Date(job.createdAt).toLocaleDateString()}
+              {new Date(job.createdAt).toLocaleDateString("en-CA")}
             </span>
           </div>
           <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">

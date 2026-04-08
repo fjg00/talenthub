@@ -89,7 +89,7 @@ export function JobCard({ job, index }: JobCardProps) {
           )}
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
-            {new Date(job.createdAt).toLocaleDateString()}
+            {new Date(job.createdAt).toLocaleDateString("en-CA")}
           </span>
         </div>
 

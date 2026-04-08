@@ -105,7 +105,7 @@ function ApplicantCard({
             )}
             <span>
               {t("appliedOn")}{" "}
-              {new Date(applicant.createdAt).toLocaleDateString()}
+              {new Date(applicant.createdAt).toLocaleDateString("en-CA")}
             </span>
           </div>
           {profile?.skills && profile.skills.length > 0 && (

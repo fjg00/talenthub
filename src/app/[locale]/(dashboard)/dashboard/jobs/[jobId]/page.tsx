@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/dal/profiles";
-import { getJobById, getJobWithApplications, hasApplied, incrementJobViews } from "@/lib/dal/jobs";
+import { getJobById, getJobWithApplications, hasApplied, incrementJobViews, getSuggestedJobs } from "@/lib/dal/jobs";
 import { ApplicantList } from "@/components/dashboard/applicant-list";
 import { ApplyForm } from "@/components/dashboard/apply-form";
 import { JobStatusBadge } from "@/components/dashboard/status-badge";
@@ -9,6 +9,7 @@ import { AIJobOptimizer } from "@/components/dashboard/ai-job-optimizer";
 import { getTranslations } from "next-intl/server";
 import { MapPin, Building2, Clock, Coins, Eye } from "lucide-react";
 import { formatViews } from "@/lib/utils/format-views";
+import { JobSuggestionsSidebar } from "@/components/dashboard/job-suggestions";
 
 export default async function JobDetailPage({
   params,
@@ -100,65 +101,82 @@ export default async function JobDetailPage({
   // Increment view count (fire-and-forget)
   incrementJobViews(jobId);
 
-  const alreadyApplied = await hasApplied(jobId, user.id);
+  const candidateSkills = profile.candidateProfile?.skills ?? [];
+  const candidateLocation = profile.candidateProfile?.location;
+
+  const [alreadyApplied, suggestions] = await Promise.all([
+    hasApplied(jobId, user.id),
+    getSuggestedJobs(jobId, candidateSkills, candidateLocation),
+  ]);
+
   const companyName =
     job.employer.employerProfile?.companyName ?? job.employer.fullName;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{job.title}</h1>
-        <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Building2 className="h-3.5 w-3.5" /> {companyName}
-          </span>
-          {job.location && (
+    <div className="flex gap-8">
+      {/* Main content */}
+      <div className="min-w-0 flex-1 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">{job.title}</h1>
+          <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5" /> {job.location}
+              <Building2 className="h-3.5 w-3.5" /> {companyName}
             </span>
-          )}
-          {job.jobType && <span>{t(job.jobType)}</span>}
-          {job.experienceLevel && <span>{t(job.experienceLevel)}</span>}
-          {job.salaryMin && (
-            <span className="flex items-center gap-1">
-              <Coins className="h-3.5 w-3.5" />
-              {job.salaryMin.toLocaleString()}
-              {job.salaryMax ? `–${job.salaryMax.toLocaleString()}` : "+"}{" "}
-              {job.currency}
-            </span>
-          )}
-          {job.deadline && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {t("deadlineOn")} {new Date(job.deadline).toLocaleDateString()}
-            </span>
-          )}
+            {job.location && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> {job.location}
+              </span>
+            )}
+            {job.jobType && <span>{t(job.jobType)}</span>}
+            {job.experienceLevel && <span>{t(job.experienceLevel)}</span>}
+            {job.salaryMin && (
+              <span className="flex items-center gap-1">
+                <Coins className="h-3.5 w-3.5" />
+                {job.salaryMin.toLocaleString()}
+                {job.salaryMax ? `–${job.salaryMax.toLocaleString()}` : "+"}{" "}
+                {job.currency}
+              </span>
+            )}
+            {job.deadline && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {t("deadlineOn")} {new Date(job.deadline).toLocaleDateString()}
+              </span>
+            )}
+          </div>
         </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">
+            {t("description")}
+          </h2>
+          <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+            {job.description}
+          </p>
+        </div>
+
+        {job.skills && job.skills.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {job.skills.map((skill) => (
+              <span
+                key={skill}
+                className="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <ApplyForm jobId={jobId} hasApplied={alreadyApplied} />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">
-          {t("description")}
-        </h2>
-        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-          {job.description}
-        </p>
-      </div>
-
-      {job.skills && job.skills.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {job.skills.map((skill) => (
-            <span
-              key={skill}
-              className="rounded-full bg-primary/10 px-3 py-1 text-sm text-primary"
-            >
-              {skill}
-            </span>
-          ))}
+      {/* Suggestions sidebar — hidden on mobile */}
+      <aside className="hidden w-80 shrink-0 lg:block">
+        <div className="sticky top-24">
+          <JobSuggestionsSidebar suggestions={suggestions} />
         </div>
-      )}
-
-      <ApplyForm jobId={jobId} hasApplied={alreadyApplied} />
+      </aside>
     </div>
   );
 }

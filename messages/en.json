@@ -392,7 +392,10 @@
     "of": "of",
     "previous": "Previous",
     "next": "Next",
-    "views": "views"
+    "views": "views",
+    "suggestedForYou": "Suggested for You",
+    "strongMatch": "Strong match for your profile",
+    "exploreMore": "Explore More Jobs"
   },
   "applications": {
     "title": "My Applications",

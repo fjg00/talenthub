@@ -84,7 +84,7 @@ export function CandidateApplications({
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
                   {t("appliedOn")}{" "}
-                  {new Date(app.createdAt).toLocaleDateString()}
+                  {new Date(app.createdAt).toLocaleDateString("en-CA")}
                 </div>
               </div>
               <ApplicationStatusBadge status={app.status} />

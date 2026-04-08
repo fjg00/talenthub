@@ -130,3 +130,48 @@ export async function incrementJobViews(jobId: string) {
     .set({ views: sql`${jobs.views} + 1` })
     .where(eq(jobs.id, jobId));
 }
+
+export async function getSuggestedJobs(
+  excludeJobId: string,
+  candidateSkills: string[],
+  candidateLocation: string | null | undefined,
+  limit = 6
+) {
+  const allPublished = await db.query.jobs.findMany({
+    where: and(eq(jobs.status, "published"), sql`${jobs.id} != ${excludeJobId}`),
+    orderBy: desc(jobs.createdAt),
+    limit: 50,
+    with: {
+      employer: { with: { employerProfile: true } },
+    },
+  });
+
+  const normalise = (s: string) => s.toLowerCase().trim();
+  const candidateSet = new Set(candidateSkills.map(normalise));
+
+  const scored = allPublished.map((job) => {
+    const jobSkills = (job.skills ?? []).map(normalise);
+    if (jobSkills.length === 0 || candidateSet.size === 0) {
+      return { job, matchPct: 0, matchedSkills: [] as string[], signals: 0 };
+    }
+    const matched = jobSkills.filter((s) => candidateSet.has(s));
+    const matchPct = Math.round((matched.length / jobSkills.length) * 100);
+    // bonus signal: same location
+    const locationBonus =
+      candidateLocation && job.location
+        ? normalise(job.location).includes(normalise(candidateLocation)) ||
+          normalise(candidateLocation).includes(normalise(job.location))
+          ? 5
+          : 0
+        : 0;
+    return {
+      job,
+      matchPct,
+      matchedSkills: matched,
+      signals: matchPct + locationBonus,
+    };
+  });
+
+  scored.sort((a, b) => b.signals - a.signals);
+  return scored.slice(0, limit);
+}

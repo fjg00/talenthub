@@ -392,7 +392,10 @@
     "of": "من",
     "previous": "السابق",
     "next": "التالي",
-    "views": "مشاهدات"
+    "views": "مشاهدات",
+    "suggestedForYou": "مقترحة لك",
+    "strongMatch": "تطابق قوي مع ملفك الشخصي",
+    "exploreMore": "استكشف المزيد من الوظائف"
   },
   "applications": {
     "title": "طلباتي",
