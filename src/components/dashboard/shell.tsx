@@ -24,11 +24,11 @@ import {
 const employerLinks = [
   { icon: LayoutDashboard, key: "overview", href: "/dashboard" },
   { icon: Briefcase, key: "jobs", href: "/dashboard/jobs" },
-  { icon: Users, key: "candidates", href: "/dashboard" },
+  { icon: Users, key: "candidates", href: "/dashboard/candidates" },
   { icon: Video, key: "interviews", href: "/dashboard/interviews" },
-  { icon: BarChart3, key: "analytics", href: "/dashboard" },
+  { icon: BarChart3, key: "analytics", href: "/dashboard/analytics" },
   { icon: UserCircle, key: "profile", href: "/dashboard/profile" },
-  { icon: Settings, key: "settings", href: "/dashboard" },
+  { icon: Settings, key: "settings", href: "/dashboard/settings" },
 ];
 
 const candidateLinks = [
@@ -37,7 +37,7 @@ const candidateLinks = [
   { icon: FileText, key: "applications", href: "/dashboard/applications" },
   { icon: Video, key: "interviews", href: "/dashboard/interviews" },
   { icon: UserCircle, key: "profile", href: "/dashboard/profile" },
-  { icon: Settings, key: "settings", href: "/dashboard" },
+  { icon: Settings, key: "settings", href: "/dashboard/settings" },
 ];
 
 interface DashboardShellProps {

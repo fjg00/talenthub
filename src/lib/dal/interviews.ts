@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { interviews, interviewResponses } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { interviews, interviewResponses, jobs } from "@/db/schema";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 export async function getInterviewById(interviewId: string) {
   return (
@@ -55,5 +55,25 @@ export async function getInterviewForJobCandidate(
 export async function getInterviewResponses(interviewId: string) {
   return db.query.interviewResponses.findMany({
     where: eq(interviewResponses.interviewId, interviewId),
+  });
+}
+
+export async function getInterviewsByEmployer(employerId: string) {
+  // Get all jobs for this employer, then all interviews for those jobs
+  const employerJobs = await db.query.jobs.findMany({
+    where: eq(jobs.employerId, employerId),
+    columns: { id: true },
+  });
+  const jobIds = employerJobs.map((j) => j.id);
+  if (jobIds.length === 0) return [];
+
+  return db.query.interviews.findMany({
+    where: inArray(interviews.jobId, jobIds),
+    orderBy: desc(interviews.createdAt),
+    with: {
+      job: true,
+      candidate: { with: { candidateProfile: true } },
+      responses: true,
+    },
   });
 }
