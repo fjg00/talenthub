@@ -19,9 +19,16 @@ export {
   applicationStatusEnum,
 } from "./applications";
 export {
+  interviews,
+  interviewResponses,
+  interviewStatusEnum,
+} from "./interviews";
+export {
   profilesRelations,
   candidateProfilesRelations,
   employerProfilesRelations,
   jobsRelations,
   applicationsRelations,
+  interviewsRelations,
+  interviewResponsesRelations,
 } from "./relations";

@@ -8,6 +8,7 @@ import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { useTransition } from "react";
 import { AIMatchScore } from "./ai-match-score";
 import { AICandidateSummary } from "./ai-candidate-summary";
+import { InterviewRequestButton } from "./interview-request-button";
 
 interface Applicant {
   id: string;
@@ -128,6 +129,7 @@ function ApplicantCard({
           <div className="mt-3 flex flex-wrap gap-2">
             <AIMatchScore applicationId={applicant.id} jobId={jobId} />
             <AICandidateSummary candidateId={applicant.candidateId} />
+            <InterviewRequestButton jobId={jobId} candidateId={applicant.candidateId} />
           </div>
         </div>
 

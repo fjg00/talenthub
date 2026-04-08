@@ -4,6 +4,7 @@ import { candidateProfiles } from "./candidate-profiles";
 import { employerProfiles } from "./employer-profiles";
 import { jobs } from "./jobs";
 import { applications } from "./applications";
+import { interviews, interviewResponses } from "./interviews";
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   candidateProfile: one(candidateProfiles, {
@@ -16,6 +17,7 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   }),
   jobs: many(jobs),
   applications: many(applications),
+  interviews: many(interviews),
 }));
 
 export const candidateProfilesRelations = relations(
@@ -44,6 +46,7 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
     references: [profiles.id],
   }),
   applications: many(applications),
+  interviews: many(interviews),
 }));
 
 export const applicationsRelations = relations(applications, ({ one }) => ({
@@ -56,3 +59,25 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
     references: [profiles.id],
   }),
 }));
+
+export const interviewsRelations = relations(interviews, ({ one, many }) => ({
+  job: one(jobs, {
+    fields: [interviews.jobId],
+    references: [jobs.id],
+  }),
+  candidate: one(profiles, {
+    fields: [interviews.candidateId],
+    references: [profiles.id],
+  }),
+  responses: many(interviewResponses),
+}));
+
+export const interviewResponsesRelations = relations(
+  interviewResponses,
+  ({ one }) => ({
+    interview: one(interviews, {
+      fields: [interviewResponses.interviewId],
+      references: [interviews.id],
+    }),
+  })
+);

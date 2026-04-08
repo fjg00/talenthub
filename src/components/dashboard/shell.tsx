@@ -25,7 +25,7 @@ const employerLinks = [
   { icon: LayoutDashboard, key: "overview", href: "/dashboard" },
   { icon: Briefcase, key: "jobs", href: "/dashboard/jobs" },
   { icon: Users, key: "candidates", href: "/dashboard" },
-  { icon: Video, key: "interviews", href: "/dashboard" },
+  { icon: Video, key: "interviews", href: "/dashboard/interviews" },
   { icon: BarChart3, key: "analytics", href: "/dashboard" },
   { icon: UserCircle, key: "profile", href: "/dashboard/profile" },
   { icon: Settings, key: "settings", href: "/dashboard" },
@@ -35,7 +35,7 @@ const candidateLinks = [
   { icon: LayoutDashboard, key: "overview", href: "/dashboard" },
   { icon: Briefcase, key: "jobs", href: "/dashboard/jobs" },
   { icon: FileText, key: "applications", href: "/dashboard/applications" },
-  { icon: Video, key: "interviews", href: "/dashboard" },
+  { icon: Video, key: "interviews", href: "/dashboard/interviews" },
   { icon: UserCircle, key: "profile", href: "/dashboard/profile" },
   { icon: Settings, key: "settings", href: "/dashboard" },
 ];
