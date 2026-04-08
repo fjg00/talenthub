@@ -55,6 +55,7 @@ export const jobs = pgTable("jobs", {
   salaryMax: integer("salary_max"),
   currency: currencyEnum("currency").default("USD"),
   deadline: timestamp("deadline", { withTimezone: true }),
+  views: integer("views").notNull().default(0),
   status: jobStatusEnum("status").notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { jobs, applications } from "@/db/schema";
-import { eq, and, ilike, or, sql, desc, count } from "drizzle-orm";
+import { eq, and, ilike, or, sql, desc, count, sum } from "drizzle-orm";
 
 export async function getJobsByEmployer(userId: string) {
   const result = await db.query.jobs.findMany({
@@ -122,4 +122,11 @@ export async function hasApplied(jobId: string, candidateId: string) {
     ),
   });
   return !!result;
+}
+
+export async function incrementJobViews(jobId: string) {
+  await db
+    .update(jobs)
+    .set({ views: sql`${jobs.views} + 1` })
+    .where(eq(jobs.id, jobId));
 }

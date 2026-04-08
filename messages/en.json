@@ -286,7 +286,8 @@
     "hired": "Hired",
     "rejected": "Rejected",
     "perJobBreakdown": "Per-Job Breakdown",
-    "noJobsYet": "No jobs posted yet."
+    "noJobsYet": "No jobs posted yet.",
+    "totalViews": "Total Views"
   },
   "profile": {
     "title": "Profile Settings",
@@ -390,7 +391,8 @@
     "page": "Page",
     "of": "of",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "views": "views"
   },
   "applications": {
     "title": "My Applications",

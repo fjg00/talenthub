@@ -1,13 +1,14 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/dal/profiles";
-import { getJobById, getJobWithApplications, hasApplied } from "@/lib/dal/jobs";
+import { getJobById, getJobWithApplications, hasApplied, incrementJobViews } from "@/lib/dal/jobs";
 import { ApplicantList } from "@/components/dashboard/applicant-list";
 import { ApplyForm } from "@/components/dashboard/apply-form";
 import { JobStatusBadge } from "@/components/dashboard/status-badge";
 import { AIJobOptimizer } from "@/components/dashboard/ai-job-optimizer";
 import { getTranslations } from "next-intl/server";
-import { MapPin, Building2, Clock, Coins } from "lucide-react";
+import { MapPin, Building2, Clock, Coins, Eye } from "lucide-react";
+import { formatViews } from "@/lib/utils/format-views";
 
 export default async function JobDetailPage({
   params,
@@ -56,6 +57,10 @@ export default async function JobDetailPage({
                 {job.currency}
               </span>
             )}
+            <span className="flex items-center gap-1">
+              <Eye className="h-3.5 w-3.5" />
+              {formatViews(job.views)} {t("views")}
+            </span>
           </div>
         </div>
 
@@ -91,6 +96,9 @@ export default async function JobDetailPage({
   // Candidate view
   const job = await getJobById(jobId);
   if (!job || job.status !== "published") notFound();
+
+  // Increment view count (fire-and-forget)
+  incrementJobViews(jobId);
 
   const alreadyApplied = await hasApplied(jobId, user.id);
   const companyName =

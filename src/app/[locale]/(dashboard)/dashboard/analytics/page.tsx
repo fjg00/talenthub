@@ -13,7 +13,9 @@ import {
   TrendingUp,
   Target,
   Clock,
+  Eye,
 } from "lucide-react";
+import { formatViews } from "@/lib/utils/format-views";
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
@@ -42,6 +44,8 @@ export default async function AnalyticsPage() {
         )
       : 0;
 
+  const totalViews = employerJobs.reduce((sum, j) => sum + (j.views ?? 0), 0);
+
   const hireRate =
     stats.totalApplicants > 0
       ? Math.round((stats.hired / stats.totalApplicants) * 100)
@@ -61,6 +65,7 @@ export default async function AnalyticsPage() {
   const jobStats = employerJobs.map((job) => ({
     title: job.title,
     status: job.status,
+    views: job.views ?? 0,
     applicants: job.applications.length,
     statusBreakdown: job.applications.reduce(
       (acc, app) => {
@@ -76,7 +81,16 @@ export default async function AnalyticsPage() {
       <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
 
       {/* Top-level KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="inline-flex rounded-xl bg-blue-500/10 p-2.5">
+            <Eye className="h-5 w-5 text-blue-500" />
+          </div>
+          <div className="mt-3 text-3xl font-bold text-foreground">
+            {formatViews(totalViews)}
+          </div>
+          <div className="text-sm text-muted-foreground">{t("totalViews")}</div>
+        </div>
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="inline-flex rounded-xl bg-primary/10 p-2.5">
             <Users className="h-5 w-5 text-primary" />
@@ -180,9 +194,15 @@ export default async function AnalyticsPage() {
                       {job.status}
                     </span>
                   </div>
-                  <span className="text-2xl font-bold text-foreground">
-                    {job.applicants}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Eye className="h-4 w-4" />
+                      {formatViews(job.views)}
+                    </span>
+                    <span className="text-2xl font-bold text-foreground">
+                      {job.applicants}
+                    </span>
+                  </div>
                 </div>
                 {job.applicants > 0 && (
                   <div className="mt-3 flex h-3 overflow-hidden rounded-full">

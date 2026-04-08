@@ -3,8 +3,9 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion } from "framer-motion";
-import { Briefcase, Users, Plus, Trash2 } from "lucide-react";
+import { Briefcase, Users, Plus, Trash2, Eye } from "lucide-react";
 import { JobStatusBadge } from "./status-badge";
+import { formatViews } from "@/lib/utils/format-views";
 import { toggleJobStatusAction, deleteJobAction } from "@/lib/actions/jobs";
 import { useTransition } from "react";
 
@@ -13,6 +14,7 @@ interface Job {
   title: string;
   location: string | null;
   jobType: string | null;
+  views: number;
   status: string;
   createdAt: Date;
   applications: { id: string }[];
@@ -90,9 +92,15 @@ function JobCard({ job, index }: { job: Job & { applications: { id: string }[] }
               {new Date(job.createdAt).toLocaleDateString()}
             </span>
           </div>
-          <div className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
-            <Users className="h-4 w-4" />
-            {job.applications.length} {t("applicants")}
+          <div className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Eye className="h-4 w-4" />
+              {formatViews(job.views)} {t("views")}
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              {job.applications.length} {t("applicants")}
+            </span>
           </div>
         </div>
 
