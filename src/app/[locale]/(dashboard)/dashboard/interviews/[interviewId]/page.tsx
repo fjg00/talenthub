@@ -5,6 +5,14 @@ import { getInterviewById } from "@/lib/dal/interviews";
 import { InterviewSession } from "@/components/dashboard/interview-session";
 import { InterviewResults } from "@/components/dashboard/interview-results";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
+import {
+  User,
+  MapPin,
+  Briefcase,
+  ArrowLeft,
+  Video,
+} from "lucide-react";
 
 export default async function InterviewPage({
   params,
@@ -72,17 +80,95 @@ export default async function InterviewPage({
 
     const candidateName =
       interview.candidate.fullName ?? t("unknownCandidate");
+    const cp = interview.candidate.candidateProfile;
+    const responseCount = interview.responses.length;
+    const questionCount = questions.length;
 
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {t("interviewResults")}
-          </h1>
-          <p className="text-muted-foreground">
-            {candidateName} — {interview.job.title}
-          </p>
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Back link */}
+        <Link
+          href="/dashboard/interviews"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("title")}
+        </Link>
+
+        {/* Candidate info card */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/10">
+                  <User className="h-5 w-5 text-violet-500" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground">
+                    {candidateName}
+                  </h1>
+                  {cp?.headline && (
+                    <p className="text-sm text-muted-foreground">
+                      {cp.headline}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                {cp?.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {cp.location}
+                  </span>
+                )}
+                {cp?.experienceYears != null && (
+                  <span className="flex items-center gap-1">
+                    <Briefcase className="h-3 w-3" /> {cp.experienceYears} {t("yearsExp")}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <Video className="h-3 w-3" />
+                  {responseCount}/{questionCount} {t("answered")}
+                </span>
+              </div>
+
+              {cp?.skills && cp.skills.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {cp.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Job context */}
+            <div className="text-end">
+              <p className="text-sm font-medium text-foreground">
+                {interview.job.title}
+              </p>
+              <span
+                className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
+                  interview.status === "evaluated"
+                    ? "bg-success/10 text-success"
+                    : interview.status === "completed"
+                      ? "bg-primary/10 text-primary"
+                      : interview.status === "in_progress"
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        : "bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                }`}
+              >
+                {t(interview.status)}
+              </span>
+            </div>
+          </div>
         </div>
+
+        {/* Interview results with video playback */}
         <InterviewResults
           questions={questions}
           responses={interview.responses}

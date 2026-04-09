@@ -486,7 +486,9 @@
     "pending": "Pending",
     "in_progress": "In Progress",
     "completed": "Completed",
-    "evaluated": "Evaluated"
+    "evaluated": "Evaluated",
+    "yearsExp": "years exp.",
+    "viewRecording": "View Recording"
   },
   "ai": {
     "matchScore": "AI Match Score",

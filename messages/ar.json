@@ -486,7 +486,9 @@
     "pending": "معلّقة",
     "in_progress": "قيد التنفيذ",
     "completed": "مكتملة",
-    "evaluated": "تم التقييم"
+    "evaluated": "تم التقييم",
+    "yearsExp": "سنوات خبرة",
+    "viewRecording": "مشاهدة التسجيل"
   },
   "ai": {
     "matchScore": "درجة التطابق الذكي",

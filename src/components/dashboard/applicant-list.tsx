@@ -6,7 +6,6 @@ import { User, FileText, Video, Target } from "lucide-react";
 import { ApplicationStatusBadge } from "./status-badge";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { useTransition } from "react";
-import { AICandidateSummary } from "./ai-candidate-summary";
 import { InterviewRequestButton } from "./interview-request-button";
 
 interface Applicant {
@@ -159,9 +158,6 @@ function ApplicantCard({
             </p>
           )}
 
-          <div className="mt-3">
-            <AICandidateSummary candidateId={applicant.candidateId} />
-          </div>
         </div>
 
         {/* Right side: actions */}

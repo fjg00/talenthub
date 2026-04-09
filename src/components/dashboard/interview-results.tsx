@@ -147,10 +147,22 @@ export function InterviewResults({
                 )}
               </div>
 
+              {/* Video playback */}
+              {response.videoUrl && (
+                <div className="mt-3 overflow-hidden rounded-lg">
+                  <video
+                    src={response.videoUrl}
+                    controls
+                    preload="metadata"
+                    className="aspect-video w-full bg-black"
+                  />
+                </div>
+              )}
+
               {/* Transcript */}
               {response.transcript && (
                 <div className="mt-2 rounded-lg bg-accent/50 p-2">
-                  <p className="text-xs text-muted-foreground line-clamp-3">
+                  <p className="text-xs text-muted-foreground">
                     {response.transcript}
                   </p>
                 </div>
