@@ -1,13 +1,13 @@
 "use client";
 
+import { useState, useMemo, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion } from "framer-motion";
-import { Briefcase, Users, Plus, Trash2, Eye } from "lucide-react";
+import { Briefcase, Users, Plus, Trash2, Eye, Archive, RotateCcw } from "lucide-react";
 import { JobStatusBadge } from "./status-badge";
 import { formatViews } from "@/lib/utils/format-views";
 import { toggleJobStatusAction, deleteJobAction } from "@/lib/actions/jobs";
-import { useTransition } from "react";
 
 interface Job {
   id: string;
@@ -20,12 +20,42 @@ interface Job {
   applications: { id: string }[];
 }
 
+type SortKey = "date" | "applicants" | "views";
+
 export function EmployerJobList({ jobs }: { jobs: Job[] }) {
   const t = useTranslations("jobs");
+  const [tab, setTab] = useState<"active" | "archived">("active");
+  const [sortBy, setSortBy] = useState<SortKey>("date");
+
+  const activeJobs = useMemo(
+    () => jobs.filter((j) => j.status === "draft" || j.status === "published"),
+    [jobs]
+  );
+  const archivedJobs = useMemo(
+    () => jobs.filter((j) => j.status === "closed"),
+    [jobs]
+  );
+
+  const currentJobs = tab === "active" ? activeJobs : archivedJobs;
+
+  const sorted = useMemo(() => {
+    const list = [...currentJobs];
+    switch (sortBy) {
+      case "applicants":
+        list.sort((a, b) => b.applications.length - a.applications.length);
+        break;
+      case "views":
+        list.sort((a, b) => b.views - a.views);
+        break;
+      default:
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    return list;
+  }, [currentJobs, sortBy]);
 
   if (jobs.length === 0) {
     return (
-      <div className="text-center py-16">
+      <div className="py-16 text-center">
         <Briefcase className="mx-auto h-12 w-12 text-muted-foreground/30" />
         <h2 className="mt-4 text-lg font-semibold text-foreground">{t("noJobs")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{t("noJobsDesc")}</p>
@@ -42,6 +72,7 @@ export function EmployerJobList({ jobs }: { jobs: Job[] }) {
 
   return (
     <div>
+      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{t("myJobs")}</h1>
         <Link
@@ -53,16 +84,71 @@ export function EmployerJobList({ jobs }: { jobs: Job[] }) {
         </Link>
       </div>
 
-      <div className="space-y-4">
-        {jobs.map((job, i) => (
-          <JobCard key={job.id} job={job} index={i} />
-        ))}
+      {/* Tabs + Sort */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex gap-1 rounded-xl bg-accent p-1">
+          <button
+            onClick={() => setTab("active")}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === "active"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("activeJobs")} ({activeJobs.length})
+          </button>
+          <button
+            onClick={() => setTab("archived")}
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === "archived"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            {t("archivedJobs")} ({archivedJobs.length})
+          </button>
+        </div>
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortKey)}
+          className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
+        >
+          <option value="date">{t("sortByDate")}</option>
+          <option value="applicants">{t("sortByApplicants")}</option>
+          <option value="views">{t("sortByViews")}</option>
+        </select>
       </div>
+
+      {/* Job cards */}
+      {sorted.length === 0 ? (
+        <div className="py-12 text-center">
+          <Archive className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            {tab === "archived" ? t("noArchivedJobs") : t("noJobs")}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {sorted.map((job, i) => (
+            <JobCard key={job.id} job={job} index={i} isArchived={tab === "archived"} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function JobCard({ job, index }: { job: Job & { applications: { id: string }[] }; index: number }) {
+function JobCard({
+  job,
+  index,
+  isArchived,
+}: {
+  job: Job;
+  index: number;
+  isArchived: boolean;
+}) {
   const t = useTranslations("jobs");
   const [isPending, startTransition] = useTransition();
 
@@ -105,39 +191,62 @@ function JobCard({ job, index }: { job: Job & { applications: { id: string }[] }
         </div>
 
         <div className="flex items-center gap-2">
-          {job.status === "draft" && (
+          {isArchived ? (
             <button
               disabled={isPending}
               onClick={() =>
-                startTransition(async () => { await toggleJobStatusAction(job.id, "published"); })
+                startTransition(async () => {
+                  await toggleJobStatusAction(job.id, "published");
+                })
               }
-              className="rounded-lg bg-success/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/20 disabled:opacity-50"
+              className="flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
             >
-              {t("publish")}
+              <RotateCcw className="h-3 w-3" />
+              {t("reopen")}
             </button>
+          ) : (
+            <>
+              {job.status === "draft" && (
+                <button
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await toggleJobStatusAction(job.id, "published");
+                    })
+                  }
+                  className="rounded-lg bg-success/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/20 disabled:opacity-50"
+                >
+                  {t("publish")}
+                </button>
+              )}
+              {job.status === "published" && (
+                <button
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await toggleJobStatusAction(job.id, "closed");
+                    })
+                  }
+                  className="rounded-lg bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+                >
+                  {t("close")}
+                </button>
+              )}
+              <Link
+                href={`/dashboard/jobs/${job.id}/edit`}
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/80"
+              >
+                {t("editJob")}
+              </Link>
+            </>
           )}
-          {job.status === "published" && (
-            <button
-              disabled={isPending}
-              onClick={() =>
-                startTransition(async () => { await toggleJobStatusAction(job.id, "closed"); })
-              }
-              className="rounded-lg bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
-            >
-              {t("close")}
-            </button>
-          )}
-          <Link
-            href={`/dashboard/jobs/${job.id}/edit`}
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/80"
-          >
-            {t("editJob")}
-          </Link>
           <button
             disabled={isPending}
             onClick={() => {
               if (confirm(t("deleteConfirm"))) {
-                startTransition(async () => { await deleteJobAction(job.id); });
+                startTransition(async () => {
+                  await deleteJobAction(job.id);
+                });
               }
             }}
             className="rounded-lg p-1.5 text-error transition-colors hover:bg-error/10 disabled:opacity-50"

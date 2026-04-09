@@ -2,11 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { User, FileText } from "lucide-react";
+import { User, FileText, Video, Target } from "lucide-react";
 import { ApplicationStatusBadge } from "./status-badge";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
 import { useTransition } from "react";
-import { AIMatchScore } from "./ai-match-score";
 import { AICandidateSummary } from "./ai-candidate-summary";
 import { InterviewRequestButton } from "./interview-request-button";
 
@@ -17,6 +16,9 @@ interface Applicant {
   cvUrl: string | null;
   status: string;
   createdAt: Date;
+  matchPct: number;
+  matchedSkills: string[];
+  missingSkills: string[];
   candidate: {
     fullName: string;
     email: string;
@@ -78,6 +80,15 @@ function ApplicantCard({
   const [isPending, startTransition] = useTransition();
   const profile = applicant.candidate.candidateProfile;
 
+  const matchColor =
+    applicant.matchPct >= 75
+      ? "text-success bg-success/10"
+      : applicant.matchPct >= 50
+        ? "text-amber-600 bg-amber-500/10 dark:text-amber-400"
+        : "text-muted-foreground bg-accent";
+
+  const matchedSet = new Set(applicant.matchedSkills.map((s) => s.toLowerCase()));
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -87,17 +98,24 @@ function ApplicantCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
+          {/* Name + match badge + status */}
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">
               {applicant.candidate.fullName}
             </span>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${matchColor}`}>
+              <Target className="h-3 w-3" />
+              {applicant.matchPct}% {t("matchScore")}
+            </span>
             <ApplicationStatusBadge status={applicant.status} />
           </div>
+
           {profile?.headline && (
             <p className="mt-0.5 text-sm text-muted-foreground">
               {profile.headline}
             </p>
           )}
+
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             {profile?.location && <span>{profile.location}</span>}
             {profile?.experienceYears != null && (
@@ -108,38 +126,71 @@ function ApplicantCard({
               {new Date(applicant.createdAt).toLocaleDateString("en-CA")}
             </span>
           </div>
+
+          {/* Skills with match highlighting */}
           {profile?.skills && profile.skills.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
-              {profile.skills.slice(0, 5).map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
-                >
-                  {skill}
+              {profile.skills.slice(0, 8).map((skill) => {
+                const isMatched = matchedSet.has(skill.toLowerCase());
+                return (
+                  <span
+                    key={skill}
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      isMatched
+                        ? "bg-success/15 text-success font-medium"
+                        : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    {skill}
+                  </span>
+                );
+              })}
+              {profile.skills.length > 8 && (
+                <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted-foreground">
+                  +{profile.skills.length - 8}
                 </span>
-              ))}
+              )}
             </div>
           )}
+
           {applicant.coverLetter && (
             <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
               {applicant.coverLetter}
             </p>
           )}
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <AIMatchScore applicationId={applicant.id} jobId={jobId} />
+          <div className="mt-3">
             <AICandidateSummary candidateId={applicant.candidateId} />
-            <InterviewRequestButton jobId={jobId} candidateId={applicant.candidateId} />
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        {/* Right side: actions */}
+        <div className="flex flex-col items-end gap-3">
+          {/* Match score visual */}
+          <div className="text-center">
+            <div className={`text-2xl font-bold ${applicant.matchPct >= 75 ? "text-success" : applicant.matchPct >= 50 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+              {applicant.matchPct}%
+            </div>
+            <div className="text-[10px] text-muted-foreground">{t("matchScore")}</div>
+          </div>
+
+          {/* Interview request — prominent */}
+          <InterviewRequestButton jobId={jobId} candidateId={applicant.candidateId} />
+
+          {/* CV link */}
           {applicant.cvUrl && (
-            <span className="flex items-center gap-1 text-xs text-primary">
+            <a
+              href={applicant.cvUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+            >
               <FileText className="h-3 w-3" />
               {t("viewCV")}
-            </span>
+            </a>
           )}
+
+          {/* Status dropdown */}
           <select
             value={applicant.status}
             disabled={isPending}

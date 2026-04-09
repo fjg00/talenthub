@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { jobs, applications } from "@/db/schema";
 import { eq, and, ilike, or, sql, desc, count, sum } from "drizzle-orm";
+import { computeSkillMatch } from "@/lib/utils/skill-match";
 
 export async function getJobsByEmployer(userId: string) {
   const result = await db.query.jobs.findMany({
@@ -111,7 +112,17 @@ export async function getJobWithApplications(
       },
     },
   });
-  return result ?? null;
+  if (!result) return null;
+
+  const jobSkills = result.skills ?? [];
+  const enrichedApplications = result.applications
+    .map((app) => ({
+      ...app,
+      ...computeSkillMatch(jobSkills, app.candidate.candidateProfile?.skills ?? []),
+    }))
+    .sort((a, b) => b.matchPct - a.matchPct);
+
+  return { ...result, applications: enrichedApplications };
 }
 
 export async function hasApplied(jobId: string, candidateId: string) {
@@ -147,16 +158,9 @@ export async function getSuggestedJobs(
   });
 
   const normalise = (s: string) => s.toLowerCase().trim();
-  const candidateSet = new Set(candidateSkills.map(normalise));
 
   const scored = allPublished.map((job) => {
-    const jobSkills = (job.skills ?? []).map(normalise);
-    if (jobSkills.length === 0 || candidateSet.size === 0) {
-      return { job, matchPct: 0, matchedSkills: [] as string[], signals: 0 };
-    }
-    const matched = jobSkills.filter((s) => candidateSet.has(s));
-    const matchPct = Math.round((matched.length / jobSkills.length) * 100);
-    // bonus signal: same location
+    const { matchPct, matchedSkills } = computeSkillMatch(job.skills ?? [], candidateSkills);
     const locationBonus =
       candidateLocation && job.location
         ? normalise(job.location).includes(normalise(candidateLocation)) ||
@@ -167,7 +171,7 @@ export async function getSuggestedJobs(
     return {
       job,
       matchPct,
-      matchedSkills: matched,
+      matchedSkills,
       signals: matchPct + locationBonus,
     };
   });

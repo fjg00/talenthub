@@ -14,8 +14,16 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ApplicationStatusBadge } from "@/components/dashboard/status-badge";
+import { CandidateFilters } from "@/components/dashboard/candidate-filters";
+import { Suspense } from "react";
 
-export default async function CandidatesPage() {
+export default async function CandidatesPage({
+  searchParams: searchParamsPromise,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const searchParams = await searchParamsPromise;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,9 +63,64 @@ export default async function CandidatesPage() {
     }
   }
 
-  const candidates = Array.from(candidateMap.entries());
+  let candidates = Array.from(candidateMap.entries());
 
-  if (candidates.length === 0) {
+  // Apply filters
+  const nameFilter = searchParams.name?.toLowerCase();
+  if (nameFilter) {
+    candidates = candidates.filter(([, { candidate }]) =>
+      candidate.fullName.toLowerCase().includes(nameFilter)
+    );
+  }
+
+  const skillFilter = searchParams.skill?.toLowerCase();
+  if (skillFilter) {
+    candidates = candidates.filter(([, { candidate }]) =>
+      candidate.candidateProfile?.skills?.some((s) =>
+        s.toLowerCase().includes(skillFilter)
+      )
+    );
+  }
+
+  const locationFilter = searchParams.location?.toLowerCase();
+  if (locationFilter) {
+    candidates = candidates.filter(([, { candidate }]) =>
+      candidate.candidateProfile?.location?.toLowerCase().includes(locationFilter)
+    );
+  }
+
+  const expMin = searchParams.expMin ? parseInt(searchParams.expMin) : null;
+  const expMax = searchParams.expMax ? parseInt(searchParams.expMax) : null;
+  if (expMin != null && !isNaN(expMin)) {
+    candidates = candidates.filter(
+      ([, { candidate }]) =>
+        (candidate.candidateProfile?.experienceYears ?? 0) >= expMin
+    );
+  }
+  if (expMax != null && !isNaN(expMax)) {
+    candidates = candidates.filter(
+      ([, { candidate }]) =>
+        (candidate.candidateProfile?.experienceYears ?? 0) <= expMax
+    );
+  }
+
+  // Apply sort
+  const sortKey = searchParams.sort ?? "name";
+  candidates.sort((a, b) => {
+    switch (sortKey) {
+      case "experience":
+        return (
+          (b[1].candidate.candidateProfile?.experienceYears ?? 0) -
+          (a[1].candidate.candidateProfile?.experienceYears ?? 0)
+        );
+      case "applications":
+        return b[1].apps.length - a[1].apps.length;
+      default:
+        return a[1].candidate.fullName.localeCompare(b[1].candidate.fullName);
+    }
+  });
+
+  if (candidates.length === 0 && !nameFilter && !skillFilter && !locationFilter && expMin == null && expMax == null) {
     return (
       <div className="py-16 text-center">
         <Users className="mx-auto h-12 w-12 text-muted-foreground/30" />
@@ -80,113 +143,123 @@ export default async function CandidatesPage() {
         </span>
       </div>
 
-      <div className="space-y-4">
-        {candidates.map(([candidateId, { candidate, apps }]) => {
-          const cp = candidate.candidateProfile;
-          const interview = interviewMap.get(candidateId);
-          const latestApp = apps[0];
+      <Suspense>
+        <CandidateFilters />
+      </Suspense>
 
-          return (
-            <div
-              key={candidateId}
-              className="rounded-2xl border border-border bg-card p-5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  {/* Name and headline */}
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-foreground">
-                      {candidate.fullName}
-                    </h3>
-                    {interview?.overallScore != null && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                          interview.overallScore >= 75
-                            ? "bg-success/10 text-success"
-                            : interview.overallScore >= 50
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                              : "bg-error/10 text-error"
-                        }`}
-                      >
-                        {t("interviewScore")}: {interview.overallScore}%
-                      </span>
-                    )}
-                  </div>
-                  {cp?.headline && (
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {cp.headline}
-                    </p>
-                  )}
+      {candidates.length === 0 ? (
+        <div className="py-12 text-center">
+          <Users className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <p className="mt-2 text-sm text-muted-foreground">{t("noResults")}</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {candidates.map(([candidateId, { candidate, apps }]) => {
+            const cp = candidate.candidateProfile;
+            const interview = interviewMap.get(candidateId);
 
-                  {/* Meta */}
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    {cp?.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {cp.location}
-                      </span>
-                    )}
-                    {cp?.experienceYears != null && (
-                      <span>{cp.experienceYears} {t("yearsExp")}</span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" />
-                      {t("appliedTo")} {apps.length} {apps.length === 1 ? t("job") : t("jobsPlural")}
-                    </span>
-                  </div>
-
-                  {/* Skills */}
-                  {cp?.skills && cp.skills.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {cp.skills.slice(0, 6).map((skill) => (
+            return (
+              <div
+                key={candidateId}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    {/* Name and headline */}
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground">
+                        {candidate.fullName}
+                      </h3>
+                      {interview?.overallScore != null && (
                         <span
-                          key={skill}
-                          className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                            interview.overallScore >= 75
+                              ? "bg-success/10 text-success"
+                              : interview.overallScore >= 50
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                : "bg-error/10 text-error"
+                          }`}
                         >
-                          {skill}
-                        </span>
-                      ))}
-                      {cp.skills.length > 6 && (
-                        <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted-foreground">
-                          +{cp.skills.length - 6}
+                          {t("interviewScore")}: {interview.overallScore}%
                         </span>
                       )}
                     </div>
-                  )}
+                    {cp?.headline && (
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {cp.headline}
+                      </p>
+                    )}
 
-                  {/* Applications breakdown */}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {apps.map((app) => (
+                    {/* Meta */}
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      {cp?.location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {cp.location}
+                        </span>
+                      )}
+                      {cp?.experienceYears != null && (
+                        <span>{cp.experienceYears} {t("yearsExp")}</span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Briefcase className="h-3 w-3" />
+                        {t("appliedTo")} {apps.length} {apps.length === 1 ? t("job") : t("jobsPlural")}
+                      </span>
+                    </div>
+
+                    {/* Skills */}
+                    {cp?.skills && cp.skills.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {cp.skills.slice(0, 6).map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                        {cp.skills.length > 6 && (
+                          <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted-foreground">
+                            +{cp.skills.length - 6}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Applications breakdown */}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {apps.map((app) => (
+                        <Link
+                          key={app.id}
+                          href={`/dashboard/jobs/${app.jobId}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1 text-xs transition-colors hover:bg-accent/80"
+                        >
+                          <span className="text-muted-foreground">{app.job.title}</span>
+                          <ApplicationStatusBadge status={app.status} />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right side actions */}
+                  <div className="flex flex-col items-end gap-2">
+                    {interview ? (
                       <Link
-                        key={app.id}
-                        href={`/dashboard/jobs/${app.jobId}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1 text-xs transition-colors hover:bg-accent/80"
+                        href={`/dashboard/interviews/${interview.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-500/20 dark:text-violet-400"
                       >
-                        <span className="text-muted-foreground">{app.job.title}</span>
-                        <ApplicationStatusBadge status={app.status} />
+                        <Video className="h-3.5 w-3.5" />
+                        {interview.status === "evaluated"
+                          ? `${t("viewResults")} (${interview.overallScore}%)`
+                          : t("viewInterview")}
                       </Link>
-                    ))}
+                    ) : null}
                   </div>
                 </div>
-
-                {/* Right side actions */}
-                <div className="flex flex-col items-end gap-2">
-                  {interview ? (
-                    <Link
-                      href={`/dashboard/interviews/${interview.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-600 transition-colors hover:bg-violet-500/20 dark:text-violet-400"
-                    >
-                      <Video className="h-3.5 w-3.5" />
-                      {interview.status === "evaluated"
-                        ? `${t("viewResults")} (${interview.overallScore}%)`
-                        : t("viewInterview")}
-                    </Link>
-                  ) : null}
-                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

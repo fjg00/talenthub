@@ -29,14 +29,18 @@ export function AIMatchScore({ applicationId, jobId }: AIMatchScoreProps) {
 
   if (!result) {
     return (
-      <button
-        onClick={handleGetScore}
-        disabled={isPending}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-500/10 to-purple-500/10 px-3 py-1.5 text-xs font-medium text-violet-600 transition-colors hover:from-violet-500/20 hover:to-purple-500/20 disabled:opacity-50 dark:text-violet-400"
-      >
-        <Sparkles className="h-3.5 w-3.5" />
-        {isPending ? t("loading") : t("getMatchScore")}
-      </button>
+      <div className="flex flex-col gap-1">
+        <button
+          onClick={handleGetScore}
+          disabled={isPending}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-500/10 to-purple-500/10 px-3 py-1.5 text-xs font-medium text-violet-600 transition-colors hover:from-violet-500/20 hover:to-purple-500/20 disabled:opacity-50 dark:text-violet-400"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          {isPending ? t("loading") : t("deepAnalysis")}
+        </button>
+        <span className="text-[10px] text-muted-foreground">{t("usesCredits")}</span>
+        {error && <p className="text-[10px] text-error">{t("quotaExceeded")}</p>}
+      </div>
     );
   }
 

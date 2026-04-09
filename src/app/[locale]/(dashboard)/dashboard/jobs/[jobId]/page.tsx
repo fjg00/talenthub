@@ -10,13 +10,18 @@ import { getTranslations } from "next-intl/server";
 import { MapPin, Building2, Clock, Coins, Eye } from "lucide-react";
 import { formatViews } from "@/lib/utils/format-views";
 import { JobSuggestionsSidebar } from "@/components/dashboard/job-suggestions";
+import { ApplicantFilters } from "@/components/dashboard/applicant-filters";
+import { Suspense } from "react";
 
 export default async function JobDetailPage({
   params,
+  searchParams: searchParamsPromise,
 }: {
   params: Promise<{ jobId: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { jobId } = await params;
+  const searchParams = await searchParamsPromise;
 
   const supabase = await createClient();
   const {
@@ -35,8 +40,52 @@ export default async function JobDetailPage({
     const job = await getJobWithApplications(jobId, user.id);
     if (!job) notFound();
 
+    // Apply filters and sorting from searchParams
+    let filteredApps = [...job.applications];
+
+    const statusFilter = searchParams.status;
+    if (statusFilter) {
+      filteredApps = filteredApps.filter((a) => a.status === statusFilter);
+    }
+
+    const skillFilter = searchParams.skill?.toLowerCase();
+    if (skillFilter) {
+      filteredApps = filteredApps.filter((a) =>
+        a.candidate.candidateProfile?.skills?.some((s) =>
+          s.toLowerCase().includes(skillFilter)
+        )
+      );
+    }
+
+    const expMin = searchParams.expMin ? parseInt(searchParams.expMin) : null;
+    const expMax = searchParams.expMax ? parseInt(searchParams.expMax) : null;
+    if (expMin != null && !isNaN(expMin)) {
+      filteredApps = filteredApps.filter(
+        (a) => (a.candidate.candidateProfile?.experienceYears ?? 0) >= expMin
+      );
+    }
+    if (expMax != null && !isNaN(expMax)) {
+      filteredApps = filteredApps.filter(
+        (a) => (a.candidate.candidateProfile?.experienceYears ?? 0) <= expMax
+      );
+    }
+
+    const sortKey = searchParams.sort ?? "match";
+    filteredApps.sort((a, b) => {
+      switch (sortKey) {
+        case "name":
+          return a.candidate.fullName.localeCompare(b.candidate.fullName);
+        case "date":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "experience":
+          return (b.candidate.candidateProfile?.experienceYears ?? 0) - (a.candidate.candidateProfile?.experienceYears ?? 0);
+        default: // match
+          return b.matchPct - a.matchPct;
+      }
+    });
+
     return (
-      <div className="mx-auto max-w-3xl space-y-8">
+      <div className="mx-auto max-w-4xl space-y-8">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground">{job.title}</h1>
@@ -89,7 +138,11 @@ export default async function JobDetailPage({
 
         <AIJobOptimizer jobId={jobId} />
 
-        <ApplicantList applicants={job.applications} jobId={jobId} />
+        <Suspense>
+          <ApplicantFilters />
+        </Suspense>
+
+        <ApplicantList applicants={filteredApps} jobId={jobId} />
       </div>
     );
   }

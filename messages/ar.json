@@ -269,7 +269,16 @@
     "job": "وظيفة",
     "jobsPlural": "وظائف",
     "viewResults": "عرض النتائج",
-    "viewInterview": "عرض المقابلة"
+    "viewInterview": "عرض المقابلة",
+    "searchByName": "البحث بالاسم...",
+    "filterBySkills": "تصفية حسب المهارات...",
+    "filterByLocation": "تصفية حسب الموقع...",
+    "expMin": "أدنى",
+    "expMax": "أقصى",
+    "sortByName": "الاسم",
+    "sortByExperience": "الخبرة",
+    "sortByApplications": "الطلبات",
+    "noResults": "لا يوجد مرشحون مطابقون للفلاتر."
   },
   "analytics": {
     "title": "التحليلات",
@@ -395,7 +404,14 @@
     "views": "مشاهدات",
     "suggestedForYou": "مقترحة لك",
     "strongMatch": "تطابق قوي مع ملفك الشخصي",
-    "exploreMore": "استكشف المزيد من الوظائف"
+    "exploreMore": "استكشف المزيد من الوظائف",
+    "activeJobs": "نشطة",
+    "archivedJobs": "مؤرشفة",
+    "noArchivedJobs": "لا توجد وظائف مؤرشفة",
+    "reopen": "إعادة فتح",
+    "sortByDate": "التاريخ",
+    "sortByApplicants": "المتقدمين",
+    "sortByViews": "المشاهدات"
   },
   "applications": {
     "title": "طلباتي",
@@ -420,7 +436,17 @@
     "applyFailed": "تعذّر إرسال الطلب. حاول مرة أخرى.",
     "candidateName": "المرشح",
     "viewCV": "عرض السيرة الذاتية",
-    "noCoverLetter": "لم يتم تقديم خطاب تقديم"
+    "noCoverLetter": "لم يتم تقديم خطاب تقديم",
+    "matchScore": "تطابق",
+    "sortByMatch": "% التطابق",
+    "sortByName": "الاسم",
+    "sortByDate": "تاريخ التقديم",
+    "sortByExperience": "الخبرة",
+    "filterBySkills": "تصفية حسب المهارات...",
+    "allStatuses": "جميع الحالات",
+    "expMin": "أدنى",
+    "expMax": "أقصى",
+    "yearsExp": "سنوات"
   },
   "interview": {
     "title": "المقابلات الذكية",
@@ -487,6 +513,9 @@
     "parseCVSuccess": "تم تحديث الملف بالبيانات المستخرجة!",
     "loading": "الذكاء الاصطناعي يفكر...",
     "error": "فشل التحليل الذكي. حاول مرة أخرى.",
-    "poweredBy": "مدعوم بالذكاء الاصطناعي"
+    "poweredBy": "مدعوم بالذكاء الاصطناعي",
+    "deepAnalysis": "تحليل ذكاء اصطناعي معمّق",
+    "usesCredits": "يستخدم رصيد الذكاء الاصطناعي",
+    "quotaExceeded": "تم تجاوز حصة الذكاء الاصطناعي. استخدم نسبة تطابق المهارات للتقييم المجاني."
   }
 }

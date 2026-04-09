@@ -269,7 +269,16 @@
     "job": "job",
     "jobsPlural": "jobs",
     "viewResults": "View Results",
-    "viewInterview": "View Interview"
+    "viewInterview": "View Interview",
+    "searchByName": "Search by name...",
+    "filterBySkills": "Filter by skills...",
+    "filterByLocation": "Filter by location...",
+    "expMin": "Min",
+    "expMax": "Max",
+    "sortByName": "Name",
+    "sortByExperience": "Experience",
+    "sortByApplications": "Applications",
+    "noResults": "No candidates match your filters."
   },
   "analytics": {
     "title": "Analytics",
@@ -395,7 +404,14 @@
     "views": "views",
     "suggestedForYou": "Suggested for You",
     "strongMatch": "Strong match for your profile",
-    "exploreMore": "Explore More Jobs"
+    "exploreMore": "Explore More Jobs",
+    "activeJobs": "Active",
+    "archivedJobs": "Archived",
+    "noArchivedJobs": "No archived jobs",
+    "reopen": "Reopen",
+    "sortByDate": "Date",
+    "sortByApplicants": "Applicants",
+    "sortByViews": "Views"
   },
   "applications": {
     "title": "My Applications",
@@ -420,7 +436,17 @@
     "applyFailed": "Could not submit application. Please try again.",
     "candidateName": "Candidate",
     "viewCV": "View CV",
-    "noCoverLetter": "No cover letter provided"
+    "noCoverLetter": "No cover letter provided",
+    "matchScore": "Match",
+    "sortByMatch": "Match %",
+    "sortByName": "Name",
+    "sortByDate": "Date Applied",
+    "sortByExperience": "Experience",
+    "filterBySkills": "Filter by skills...",
+    "allStatuses": "All Statuses",
+    "expMin": "Min",
+    "expMax": "Max",
+    "yearsExp": "yrs"
   },
   "interview": {
     "title": "AI Interviews",
@@ -487,6 +513,9 @@
     "parseCVSuccess": "Profile updated with extracted data!",
     "loading": "AI is thinking...",
     "error": "AI analysis failed. Please try again.",
-    "poweredBy": "Powered by AI"
+    "poweredBy": "Powered by AI",
+    "deepAnalysis": "AI Deep Analysis",
+    "usesCredits": "Uses AI credits",
+    "quotaExceeded": "AI quota exceeded. Use the skill match % for a free assessment."
   }
 }

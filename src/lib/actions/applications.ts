@@ -5,7 +5,9 @@ import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { applications, jobs, candidateProfiles } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
+import { interviews } from "@/db/schema";
+import { generateInterviewQuestions } from "@/lib/ai/interview";
 
 export type ApplicationState = {
   error?: string;
@@ -118,7 +120,56 @@ export async function updateApplicationStatusAction(
     })
     .where(eq(applications.id, parsed.data.applicationId));
 
+  // Auto-reject all other applicants when someone is hired
+  if (parsed.data.status === "hired") {
+    await db
+      .update(applications)
+      .set({ status: "rejected", updatedAt: new Date() })
+      .where(
+        and(
+          eq(applications.jobId, application.jobId),
+          ne(applications.id, parsed.data.applicationId),
+          ne(applications.status, "hired")
+        )
+      );
+    // Auto-close the job
+    await db
+      .update(jobs)
+      .set({ status: "closed", updatedAt: new Date() })
+      .where(eq(jobs.id, application.jobId));
+  }
+
+  // Auto-create interview when status changes to "interview"
+  if (parsed.data.status === "interview") {
+    const existing = await db.query.interviews.findFirst({
+      where: and(
+        eq(interviews.jobId, application.jobId),
+        eq(interviews.candidateId, application.candidateId)
+      ),
+    });
+    if (!existing) {
+      try {
+        const questions = await generateInterviewQuestions({
+          title: application.job.title,
+          description: application.job.description,
+          skills: application.job.skills as string[] | null,
+          experienceLevel: application.job.experienceLevel,
+        });
+        await db.insert(interviews).values({
+          jobId: application.jobId,
+          candidateId: application.candidateId,
+          questions,
+          status: "pending",
+        });
+      } catch {
+        // Interview creation failed (quota etc.) — status still updated
+      }
+    }
+  }
+
   revalidatePath(`/dashboard/jobs/${application.jobId}`);
   revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/candidates");
+  revalidatePath("/dashboard/interviews");
   return { success: true };
 }

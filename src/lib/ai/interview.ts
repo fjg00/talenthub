@@ -34,39 +34,26 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   { "text": "<the interview question>", "category": "<technical|behavioral|cultural>" }
 ]`;
 
-  const response = await getAI().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: { temperature: 0.6, maxOutputTokens: 800 },
-  });
-
-  const text = response.text?.trim() ?? "";
+  const fallbackQuestions: InterviewQuestion[] = [
+    { text: `Tell us about your relevant experience for a ${job.title} role.`, category: "behavioral" },
+    { text: `What technical skills make you a strong fit for this ${job.title} position?`, category: "technical" },
+    { text: "Describe a challenging project you worked on and how you handled it.", category: "behavioral" },
+    { text: `How would you apply ${job.skills?.slice(0, 3).join(", ") || "your skills"} in this role?`, category: "technical" },
+    { text: "Why are you interested in this role and what motivates you?", category: "cultural" },
+  ];
 
   try {
+    const response = await getAI().models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: { temperature: 0.6, maxOutputTokens: 800 },
+    });
+
+    const text = response.text?.trim() ?? "";
     return JSON.parse(text) as InterviewQuestion[];
   } catch {
-    return [
-      {
-        text: "Tell us about your relevant experience for this role.",
-        category: "behavioral",
-      },
-      {
-        text: "What technical skills make you a strong fit for this position?",
-        category: "technical",
-      },
-      {
-        text: "Describe a challenging project you worked on and how you handled it.",
-        category: "behavioral",
-      },
-      {
-        text: "How do you stay current with industry trends and technologies?",
-        category: "technical",
-      },
-      {
-        text: "Why are you interested in this role and our company?",
-        category: "cultural",
-      },
-    ];
+    // Gemini quota exceeded or other failure — return contextual fallback questions
+    return fallbackQuestions;
   }
 }
 
