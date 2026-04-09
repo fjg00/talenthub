@@ -28,6 +28,7 @@ export function VideoRecorder({
   const [transcript, setTranscript] = useState("");
   const [hasCamera, setHasCamera] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Initialize camera preview
   const initCamera = useCallback(async () => {
@@ -36,6 +37,7 @@ export function VideoRecorder({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       });
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -48,7 +50,8 @@ export function VideoRecorder({
   useEffect(() => {
     initCamera();
     return () => {
-      stream?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
       if (timerRef.current) clearInterval(timerRef.current);
       recognitionRef.current?.stop();
     };
