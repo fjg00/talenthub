@@ -14,6 +14,7 @@ import {
   type JobOptimization,
 } from "@/lib/ai/job-optimizer";
 import { parseCVText, type ParsedCV } from "@/lib/ai/cv-parser";
+import { getCachedResult, setCachedResult } from "@/lib/dal/ai-cache";
 
 // --- Match Score ---
 
@@ -32,6 +33,11 @@ export async function getMatchScoreAction(
     where: and(eq(jobs.id, jobId), eq(jobs.employerId, user.id)),
   });
   if (!job) return { error: "Unauthorized" };
+
+  // Check cache first
+  const cacheKey = `${applicationId}:${jobId}`;
+  const cached = await getCachedResult("match_score", cacheKey);
+  if (cached) return { data: cached as MatchResult };
 
   const application = await db.query.applications.findFirst({
     where: eq(applications.id, applicationId),
@@ -68,6 +74,7 @@ export async function getMatchScoreAction(
     }
   );
 
+  await setCachedResult("match_score", cacheKey, result);
   return { data: result };
 }
 
@@ -88,6 +95,10 @@ export async function getCandidateSummaryAction(
   });
   if (!profile || profile.role !== "employer") return { error: "Unauthorized" };
 
+  // Check cache first
+  const cached = await getCachedResult("candidate_summary", candidateId);
+  if (cached) return { data: cached as CandidateSummary };
+
   const candidate = await db.query.profiles.findFirst({
     where: eq(profiles.id, candidateId),
     with: { candidateProfile: true },
@@ -106,6 +117,7 @@ export async function getCandidateSummaryAction(
     bio: cp?.bio ?? null,
   });
 
+  await setCachedResult("candidate_summary", candidateId, result);
   return { data: result };
 }
 
@@ -119,6 +131,10 @@ export async function optimizeJobAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+
+  // Check cache first
+  const cached = await getCachedResult("job_optimization", jobId);
+  if (cached) return { data: cached as JobOptimization };
 
   const job = await db.query.jobs.findFirst({
     where: and(eq(jobs.id, jobId), eq(jobs.employerId, user.id)),
@@ -134,6 +150,7 @@ export async function optimizeJobAction(
     skills: job.skills as string[] | null,
   });
 
+  await setCachedResult("job_optimization", jobId, result);
   return { data: result };
 }
 

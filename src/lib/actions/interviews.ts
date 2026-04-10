@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { interviews, interviewResponses, jobs } from "@/db/schema";
+import { interviews, interviewResponses, jobs, profiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
   generateInterviewQuestions,
   evaluateResponse,
   evaluateOverallInterview,
 } from "@/lib/ai/interview";
+import { createNotification } from "@/lib/dal/notifications";
 
 export type InterviewActionState = {
   error?: string;
@@ -112,11 +113,10 @@ export async function submitResponseAction(
       eq(interviews.id, interviewId),
       eq(interviews.candidateId, user.id)
     ),
-    with: { job: true },
   });
   if (!interview) return { error: "Unauthorized" };
 
-  // Save the response
+  // Save the response (AI evaluation is deferred — employer triggers it manually)
   await db.insert(interviewResponses).values({
     interviewId,
     questionIndex,
@@ -124,37 +124,6 @@ export async function submitResponseAction(
     transcript,
     durationSeconds,
   });
-
-  // AI evaluate this response
-  const question = (
-    interview.questions as { text: string; category: string }[]
-  )[questionIndex];
-
-  if (question && transcript.trim().length > 10) {
-    try {
-      const evaluation = await evaluateResponse(
-        question.text,
-        transcript,
-        interview.job.title
-      );
-
-      await db
-        .update(interviewResponses)
-        .set({
-          aiScore: evaluation.score,
-          aiFeedback: evaluation.feedback,
-          aiImprovements: evaluation.improvements,
-        })
-        .where(
-          and(
-            eq(interviewResponses.interviewId, interviewId),
-            eq(interviewResponses.questionIndex, questionIndex)
-          )
-        );
-    } catch {
-      // AI evaluation failed — response is still saved
-    }
-  }
 
   return { success: true };
 }
@@ -174,18 +143,135 @@ export async function completeInterviewAction(
       eq(interviews.id, interviewId),
       eq(interviews.candidateId, user.id)
     ),
-    with: { job: true, responses: true },
+    with: { job: true },
   });
   if (!interview) return { error: "Unauthorized" };
 
-  // Mark as completed
+  // Mark as completed (AI evaluation is deferred — employer triggers it manually)
   await db
     .update(interviews)
     .set({ status: "completed", updatedAt: new Date() })
     .where(eq(interviews.id, interviewId));
 
-  // Run overall AI evaluation
+  // Notify employer that the candidate completed the interview
+  createNotification({
+    userId: interview.job.employerId,
+    type: "interview_completed",
+    title: "Interview Completed",
+    message: `A candidate completed their interview for ${interview.job.title}`,
+    relatedUrl: `/dashboard/interviews/${interviewId}`,
+  }).catch(() => {});
+
+  revalidatePath("/dashboard/interviews");
+  revalidatePath(`/dashboard/jobs/${interview.jobId}`);
+  return { success: true, interviewId };
+}
+
+// ─── Employer: AI evaluate a single response on demand ─────────────────────
+
+export async function evaluateResponseAction(
+  interviewId: string,
+  questionIndex: number
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  // Verify employer owns the job
+  const interview = await db.query.interviews.findFirst({
+    where: eq(interviews.id, interviewId),
+    with: { job: true, responses: true },
+  });
+  if (!interview || interview.job.employerId !== user.id)
+    return { error: "Unauthorized" };
+
+  const response = interview.responses.find(
+    (r) => r.questionIndex === questionIndex
+  );
+  if (!response || !response.transcript) return { error: "No response found" };
+
   const questions = interview.questions as { text: string; category: string }[];
+  const question = questions[questionIndex];
+  if (!question) return { error: "Invalid question" };
+
+  const evaluation = await evaluateResponse(
+    question.text,
+    response.transcript,
+    interview.job.title
+  );
+
+  await db
+    .update(interviewResponses)
+    .set({
+      aiScore: evaluation.score,
+      aiFeedback: evaluation.feedback,
+      aiImprovements: evaluation.improvements,
+    })
+    .where(
+      and(
+        eq(interviewResponses.interviewId, interviewId),
+        eq(interviewResponses.questionIndex, questionIndex)
+      )
+    );
+
+  revalidatePath(`/dashboard/interviews/${interviewId}`);
+  return { success: true };
+}
+
+// ─── Employer: AI evaluate the entire interview on demand ──────────────────
+
+export async function evaluateInterviewAction(
+  interviewId: string
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const interview = await db.query.interviews.findFirst({
+    where: eq(interviews.id, interviewId),
+    with: { job: true, responses: true },
+  });
+  if (!interview || interview.job.employerId !== user.id)
+    return { error: "Unauthorized" };
+
+  const questions = interview.questions as { text: string; category: string }[];
+
+  // First evaluate any unevaluated responses
+  for (const r of interview.responses) {
+    if (r.aiScore == null && r.transcript && r.transcript.trim().length > 10) {
+      const q = questions[r.questionIndex];
+      if (!q) continue;
+      try {
+        const evaluation = await evaluateResponse(
+          q.text,
+          r.transcript,
+          interview.job.title
+        );
+        await db
+          .update(interviewResponses)
+          .set({
+            aiScore: evaluation.score,
+            aiFeedback: evaluation.feedback,
+            aiImprovements: evaluation.improvements,
+          })
+          .where(
+            and(
+              eq(interviewResponses.interviewId, interviewId),
+              eq(interviewResponses.questionIndex, r.questionIndex)
+            )
+          );
+        r.aiScore = evaluation.score;
+      } catch {
+        // Continue with other responses
+      }
+    }
+  }
+
+  // Now do overall evaluation
   const qr = interview.responses
     .filter((r) => r.transcript && r.transcript.trim().length > 10)
     .map((r) => ({
@@ -194,29 +280,31 @@ export async function completeInterviewAction(
       score: r.aiScore ?? 50,
     }));
 
-  if (qr.length > 0) {
-    try {
-      const overall = await evaluateOverallInterview(
-        interview.job.title,
-        qr
-      );
+  if (qr.length === 0) return { error: "No responses to evaluate" };
 
-      await db
-        .update(interviews)
-        .set({
-          status: "evaluated",
-          overallScore: overall.overallScore,
-          overallFeedback: overall.overallFeedback,
-          overallImprovements: overall.overallImprovements,
-          updatedAt: new Date(),
-        })
-        .where(eq(interviews.id, interviewId));
-    } catch {
-      // Overall evaluation failed — interview is still marked completed
-    }
-  }
+  const overall = await evaluateOverallInterview(interview.job.title, qr);
 
+  await db
+    .update(interviews)
+    .set({
+      status: "evaluated",
+      overallScore: overall.overallScore,
+      overallFeedback: overall.overallFeedback,
+      overallImprovements: overall.overallImprovements,
+      updatedAt: new Date(),
+    })
+    .where(eq(interviews.id, interviewId));
+
+  // Notify candidate that their interview was evaluated
+  createNotification({
+    userId: interview.candidateId,
+    type: "interview_evaluated",
+    title: "Interview Evaluated",
+    message: `Your interview for ${interview.job.title} has been evaluated — score: ${overall.overallScore}%`,
+    relatedUrl: `/dashboard/interviews/${interviewId}`,
+  }).catch(() => {});
+
+  revalidatePath(`/dashboard/interviews/${interviewId}`);
   revalidatePath("/dashboard/interviews");
-  revalidatePath(`/dashboard/jobs/${interview.jobId}`);
-  return { success: true, interviewId };
+  return { success: true };
 }

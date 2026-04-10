@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { logoutAction } from "@/lib/actions/auth";
+import { NotificationBell } from "./notification-bell";
 import {
   Brain,
   LayoutDashboard,
@@ -40,13 +41,25 @@ const candidateLinks = [
   { icon: Settings, key: "settings", href: "/dashboard/settings" },
 ];
 
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  relatedUrl: string | null;
+  read: boolean;
+  createdAt: Date;
+}
+
 interface DashboardShellProps {
   userName: string;
   userRole: "candidate" | "employer";
+  notifications: Notification[];
+  unreadCount: number;
   children: React.ReactNode;
 }
 
-export function DashboardShell({ userName, userRole, children }: DashboardShellProps) {
+export function DashboardShell({ userName, userRole, notifications, unreadCount, children }: DashboardShellProps) {
   const t = useTranslations("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -114,6 +127,7 @@ export function DashboardShell({ userName, userRole, children }: DashboardShellP
             {t("welcome")}, {userName}
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell notifications={notifications} unreadCount={unreadCount} />
             <LocaleSwitcher />
             <ThemeToggle />
           </div>

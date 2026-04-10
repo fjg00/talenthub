@@ -4,10 +4,18 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { applications, jobs, candidateProfiles } from "@/db/schema";
+import { applications, jobs, candidateProfiles, employerProfiles, profiles } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { interviews } from "@/db/schema";
 import { generateInterviewQuestions } from "@/lib/ai/interview";
+import { createNotification } from "@/lib/dal/notifications";
+import { sendEmail } from "@/lib/email";
+import {
+  newApplicationEmail,
+  statusChangeEmail,
+  interviewRequestedEmail,
+  hiredEmail,
+} from "@/lib/email-templates";
 
 export type ApplicationState = {
   error?: string;
@@ -64,6 +72,35 @@ export async function applyToJobAction(
       return { error: "alreadyApplied" };
     }
     return { error: "applyFailed" };
+  }
+
+  // Notify employer of new application
+  createNotification({
+    userId: job.employerId,
+    type: "new_application",
+    title: "New Application",
+    message: `A candidate applied to ${job.title}`,
+    relatedUrl: `/dashboard/jobs/${job.id}`,
+  }).catch(() => {});
+
+  // Email employer
+  const employer = await db.query.profiles.findFirst({
+    where: eq(profiles.id, job.employerId),
+  });
+  if (employer?.email) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const candidateName =
+      (await db.query.profiles.findFirst({ where: eq(profiles.id, user.id) }))
+        ?.fullName ?? "A candidate";
+    sendEmail({
+      to: employer.email,
+      subject: `New application for ${job.title}`,
+      html: newApplicationEmail(
+        job.title,
+        candidateName,
+        `${siteUrl}/dashboard/jobs/${job.id}`
+      ),
+    }).catch(() => {});
   }
 
   revalidatePath("/dashboard/jobs");
@@ -163,6 +200,74 @@ export async function updateApplicationStatusAction(
         });
       } catch {
         // Interview creation failed (quota etc.) — status still updated
+      }
+    }
+  }
+
+  // Notify candidate of status change
+  const statusLabels: Record<string, string> = {
+    reviewed: "Application Reviewed",
+    shortlisted: "You've Been Shortlisted!",
+    interview: "Interview Requested",
+    offered: "You Received an Offer!",
+    rejected: "Application Update",
+    hired: "Congratulations, You're Hired!",
+  };
+  const notifTitle = statusLabels[parsed.data.status];
+  if (notifTitle) {
+    const notifType =
+      parsed.data.status === "hired"
+        ? ("hired" as const)
+        : parsed.data.status === "interview"
+          ? ("interview_requested" as const)
+          : ("status_change" as const);
+
+    createNotification({
+      userId: application.candidateId,
+      type: notifType,
+      title: notifTitle,
+      message: `Your application for ${application.job.title} has been updated`,
+      relatedUrl: `/dashboard/applications`,
+    }).catch(() => {});
+
+    // Email candidate
+    const candidate = await db.query.profiles.findFirst({
+      where: eq(profiles.id, application.candidateId),
+    });
+    if (candidate?.email) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+      if (parsed.data.status === "hired") {
+        const empProfile = await db.query.employerProfiles.findFirst({
+          where: eq(employerProfiles.userId, user.id),
+        });
+        sendEmail({
+          to: candidate.email,
+          subject: `Congratulations! You've been hired for ${application.job.title}`,
+          html: hiredEmail(
+            application.job.title,
+            empProfile?.companyName ?? "the company"
+          ),
+        }).catch(() => {});
+      } else if (parsed.data.status === "interview") {
+        sendEmail({
+          to: candidate.email,
+          subject: `Interview requested for ${application.job.title}`,
+          html: interviewRequestedEmail(
+            application.job.title,
+            `${siteUrl}/dashboard/interviews`
+          ),
+        }).catch(() => {});
+      } else {
+        sendEmail({
+          to: candidate.email,
+          subject: `Application update: ${application.job.title}`,
+          html: statusChangeEmail(
+            application.job.title,
+            parsed.data.status,
+            `${siteUrl}/dashboard/applications`
+          ),
+        }).catch(() => {});
       }
     }
   }

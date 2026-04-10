@@ -33,6 +33,7 @@ interface CandidateJobListProps {
   totalCount: number;
   page: number;
   pageSize: number;
+  savedJobIds?: string[];
 }
 
 export function CandidateJobList({
@@ -40,7 +41,9 @@ export function CandidateJobList({
   totalCount,
   page,
   pageSize,
+  savedJobIds = [],
 }: CandidateJobListProps) {
+  const savedSet = new Set(savedJobIds);
   const t = useTranslations("jobs");
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -70,7 +73,7 @@ export function CandidateJobList({
     <div>
       <div className="space-y-4">
         {jobs.map((job, i) => (
-          <JobCard key={job.id} job={job} index={i} />
+          <JobCard key={job.id} job={job} index={i} saved={savedSet.has(job.id)} />
         ))}
       </div>
 

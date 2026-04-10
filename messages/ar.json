@@ -209,7 +209,42 @@
     "oauthFailed": "تعذّر تسجيل الدخول بهذا المزوّد. حاول مرة أخرى.",
     "checkEmail": "تحقق من بريدك الإلكتروني! أرسلنا لك رابط تأكيد لإكمال التسجيل.",
     "authFailed": "فشل التحقق. حاول مرة أخرى.",
-    "loading": "يرجى الانتظار..."
+    "loading": "يرجى الانتظار...",
+    "forgotPasswordDesc": "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "resetLinkSent": "أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. تحقق من صندوق الوارد.",
+    "backToLogin": "العودة لتسجيل الدخول",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "resetPasswordDesc": "أدخل كلمة المرور الجديدة أدناه.",
+    "newPassword": "كلمة المرور الجديدة",
+    "passwordsNoMatch": "كلمات المرور غير متطابقة",
+    "passwordReset": "تم إعادة تعيين كلمة المرور!",
+    "passwordResetDesc": "تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول.",
+    "login": "تسجيل الدخول"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "account": "الحساب",
+    "email": "البريد الإلكتروني",
+    "emailCantChange": "لا يمكن تغيير البريد الإلكتروني",
+    "role": "الدور",
+    "employer": "صاحب عمل",
+    "candidate": "مرشح",
+    "fullName": "الاسم الكامل",
+    "saveName": "حفظ",
+    "saved": "تم الحفظ!",
+    "changePassword": "تغيير كلمة المرور",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "confirmPassword": "تأكيد كلمة المرور الجديدة",
+    "updatePassword": "تحديث كلمة المرور",
+    "passwordChanged": "تم تغيير كلمة المرور!",
+    "passwordsNoMatch": "كلمات المرور غير متطابقة",
+    "dangerZone": "منطقة الخطر",
+    "deleteAccount": "حذف الحساب",
+    "deleteAccountDesc": "حذف حسابك نهائياً وجميع البيانات المرتبطة. لا يمكن التراجع عن هذا الإجراء.",
+    "confirmDelete": "نعم، احذف حسابي",
+    "cancel": "إلغاء"
   },
   "dashboard": {
     "welcome": "مرحباً بعودتك",
@@ -223,6 +258,7 @@
     "analytics": "التحليلات",
     "messages": "الرسائل",
     "logout": "تسجيل الخروج",
+    "savedJobs": "الوظائف المحفوظة",
     "activeJobs": "الوظائف النشطة",
     "totalApplicants": "إجمالي المتقدمين",
     "interviewsPending": "مقابلات معلقة",
@@ -488,7 +524,12 @@
     "completed": "مكتملة",
     "evaluated": "تم التقييم",
     "yearsExp": "سنوات خبرة",
-    "viewRecording": "مشاهدة التسجيل"
+    "viewRecording": "مشاهدة التسجيل",
+    "evaluateWithAI": "تقييم بالذكاء الاصطناعي",
+    "evaluateWithAIDesc": "استخدم الذكاء الاصطناعي لتقييم كل إجابة وتقديم تقييم شامل للمقابلة",
+    "evaluateAll": "تقييم الكل",
+    "evaluating": "جاري التقييم...",
+    "evaluate": "تقييم"
   },
   "ai": {
     "matchScore": "درجة التطابق الذكي",
@@ -519,5 +560,14 @@
     "deepAnalysis": "تحليل ذكاء اصطناعي معمّق",
     "usesCredits": "يستخدم رصيد الذكاء الاصطناعي",
     "quotaExceeded": "تم تجاوز حصة الذكاء الاصطناعي. استخدم نسبة تطابق المهارات للتقييم المجاني."
+  },
+  "notifications": {
+    "notifications": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات بعد",
+    "markAllRead": "تحديد الكل كمقروء",
+    "justNow": "الآن",
+    "minutesAgo": "منذ {count} دقيقة",
+    "hoursAgo": "منذ {count} ساعة",
+    "daysAgo": "منذ {count} يوم"
   }
 }

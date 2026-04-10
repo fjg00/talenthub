@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Clock, Building2 } from "lucide-react";
+import { SaveJobButton } from "./save-job-button";
 
 interface JobCardProps {
   job: {
@@ -27,9 +28,10 @@ interface JobCardProps {
     };
   };
   index: number;
+  saved?: boolean;
 }
 
-export function JobCard({ job, index }: JobCardProps) {
+export function JobCard({ job, index, saved }: JobCardProps) {
   const t = useTranslations("jobs");
 
   const companyName =
@@ -55,15 +57,22 @@ export function JobCard({ job, index }: JobCardProps) {
               {companyName}
             </div>
           </div>
-          {job.salaryMin && (
-            <div className="text-end text-sm font-medium text-foreground">
-              {job.salaryMin.toLocaleString()}
-              {job.salaryMax ? `–${job.salaryMax.toLocaleString()}` : "+"}
-              <span className="ms-1 text-xs text-muted-foreground">
-                {job.currency}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {job.salaryMin && (
+              <div className="text-end text-sm font-medium text-foreground">
+                {job.salaryMin.toLocaleString()}
+                {job.salaryMax ? `–${job.salaryMax.toLocaleString()}` : "+"}
+                <span className="ms-1 text-xs text-muted-foreground">
+                  {job.currency}
+                </span>
+              </div>
+            )}
+            {saved != null && (
+              <div onClick={(e) => e.preventDefault()}>
+                <SaveJobButton jobId={job.id} saved={saved} />
+              </div>
+            )}
+          </div>
         </div>
 
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">

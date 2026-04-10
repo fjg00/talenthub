@@ -52,6 +52,7 @@ export default async function InterviewPage({
             {t("interviewFor")} {interview.job.title}
           </h1>
           <InterviewResults
+            interviewId={interview.id}
             questions={questions}
             responses={interview.responses}
             overallScore={interview.overallScore}
@@ -170,12 +171,14 @@ export default async function InterviewPage({
 
         {/* Interview results with video playback */}
         <InterviewResults
+          interviewId={interview.id}
           questions={questions}
           responses={interview.responses}
           overallScore={interview.overallScore}
           overallFeedback={interview.overallFeedback}
           overallImprovements={interview.overallImprovements as string[] | null}
           status={interview.status}
+          isEmployer
         />
       </div>
     );

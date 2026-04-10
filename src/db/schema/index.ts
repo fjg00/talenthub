@@ -23,6 +23,9 @@ export {
   interviewResponses,
   interviewStatusEnum,
 } from "./interviews";
+export { aiCache, aiCacheTypeEnum } from "./ai-cache";
+export { notifications, notificationTypeEnum } from "./notifications";
+export { savedJobs } from "./saved-jobs";
 export {
   profilesRelations,
   candidateProfilesRelations,
@@ -31,4 +34,7 @@ export {
   applicationsRelations,
   interviewsRelations,
   interviewResponsesRelations,
+  aiCacheRelations,
+  notificationsRelations,
+  savedJobsRelations,
 } from "./relations";

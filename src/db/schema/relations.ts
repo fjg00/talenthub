@@ -5,6 +5,9 @@ import { employerProfiles } from "./employer-profiles";
 import { jobs } from "./jobs";
 import { applications } from "./applications";
 import { interviews, interviewResponses } from "./interviews";
+import { aiCache } from "./ai-cache";
+import { notifications } from "./notifications";
+import { savedJobs } from "./saved-jobs";
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   candidateProfile: one(candidateProfiles, {
@@ -18,6 +21,7 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   jobs: many(jobs),
   applications: many(applications),
   interviews: many(interviews),
+  notifications: many(notifications),
 }));
 
 export const candidateProfilesRelations = relations(
@@ -81,3 +85,24 @@ export const interviewResponsesRelations = relations(
     }),
   })
 );
+
+// ai_cache has no relations — standalone table
+export const aiCacheRelations = relations(aiCache, () => ({}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(profiles, {
+    fields: [notifications.userId],
+    references: [profiles.id],
+  }),
+}));
+
+export const savedJobsRelations = relations(savedJobs, ({ one }) => ({
+  candidate: one(profiles, {
+    fields: [savedJobs.candidateId],
+    references: [profiles.id],
+  }),
+  job: one(jobs, {
+    fields: [savedJobs.jobId],
+    references: [jobs.id],
+  }),
+}));

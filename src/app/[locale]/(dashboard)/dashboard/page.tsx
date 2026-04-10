@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/dal/profiles";
 import { getEmployerStats, getCandidateStats } from "@/lib/dal/applications";
 import { getInterviewsByEmployer, getInterviewsByCandidate } from "@/lib/dal/interviews";
+import { getSavedJobs } from "@/lib/dal/saved-jobs";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import {
@@ -16,6 +17,8 @@ import {
   Target,
   ArrowRight,
   Sparkles,
+  Heart,
+  MapPin,
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -215,9 +218,10 @@ async function EmployerOverview({ userId, name }: { userId: string; name: string
 // ─── Candidate Overview ───────────────────────────────────────────────────────
 
 async function CandidateOverview({ userId, name }: { userId: string; name: string }) {
-  const [stats, interviews] = await Promise.all([
+  const [stats, interviews, saved] = await Promise.all([
     getCandidateStats(userId),
     getInterviewsByCandidate(userId),
+    getSavedJobs(userId),
   ]);
   const t = await getTranslations("dashboard");
 
@@ -318,6 +322,50 @@ async function CandidateOverview({ userId, name }: { userId: string; name: strin
           )}
         </div>
       </div>
+
+      {/* Saved Jobs */}
+      {saved.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-error" />
+              <h2 className="text-lg font-semibold text-foreground">{t("savedJobs")}</h2>
+            </div>
+            <Link href="/dashboard/jobs" className="text-sm text-primary hover:underline">
+              {t("viewAll")} →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {saved.slice(0, 5).map((s) => {
+              const company =
+                s.job.employer?.employerProfile?.companyName ??
+                s.job.employer?.fullName ??
+                "";
+              return (
+                <Link
+                  key={s.id}
+                  href={`/dashboard/jobs/${s.job.id}`}
+                  className="flex items-center justify-between rounded-xl p-3 transition-colors hover:bg-accent/50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{s.job.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {company}
+                      {s.job.location && (
+                        <span className="ms-2">
+                          <MapPin className="me-0.5 inline h-3 w-3" />
+                          {s.job.location}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid gap-4 sm:grid-cols-2">

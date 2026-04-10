@@ -209,7 +209,42 @@
     "oauthFailed": "Could not sign in with this provider. Please try again.",
     "checkEmail": "Check your email! We sent you a confirmation link to complete your registration.",
     "authFailed": "Authentication failed. Please try again.",
-    "loading": "Please wait..."
+    "loading": "Please wait...",
+    "forgotPasswordDesc": "Enter your email and we'll send you a link to reset your password.",
+    "sendResetLink": "Send Reset Link",
+    "resetLinkSent": "We've sent a password reset link to your email. Check your inbox.",
+    "backToLogin": "Back to Login",
+    "resetPassword": "Reset Password",
+    "resetPasswordDesc": "Enter your new password below.",
+    "newPassword": "New Password",
+    "passwordsNoMatch": "Passwords do not match",
+    "passwordReset": "Password Reset!",
+    "passwordResetDesc": "Your password has been updated. You can now log in.",
+    "login": "Login"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "email": "Email",
+    "emailCantChange": "Email cannot be changed",
+    "role": "Role",
+    "employer": "Employer",
+    "candidate": "Candidate",
+    "fullName": "Full Name",
+    "saveName": "Save",
+    "saved": "Saved!",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "updatePassword": "Update Password",
+    "passwordChanged": "Password Changed!",
+    "passwordsNoMatch": "Passwords do not match",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account",
+    "deleteAccountDesc": "Permanently delete your account and all associated data. This action cannot be undone.",
+    "confirmDelete": "Yes, Delete My Account",
+    "cancel": "Cancel"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -223,6 +258,7 @@
     "analytics": "Analytics",
     "messages": "Messages",
     "logout": "Logout",
+    "savedJobs": "Saved Jobs",
     "activeJobs": "Active Jobs",
     "totalApplicants": "Total Applicants",
     "interviewsPending": "Interviews Pending",
@@ -488,7 +524,12 @@
     "completed": "Completed",
     "evaluated": "Evaluated",
     "yearsExp": "years exp.",
-    "viewRecording": "View Recording"
+    "viewRecording": "View Recording",
+    "evaluateWithAI": "AI Evaluation",
+    "evaluateWithAIDesc": "Use AI to score and provide feedback on each response and an overall interview assessment",
+    "evaluateAll": "Evaluate All",
+    "evaluating": "Evaluating...",
+    "evaluate": "Evaluate"
   },
   "ai": {
     "matchScore": "AI Match Score",
@@ -519,5 +560,14 @@
     "deepAnalysis": "AI Deep Analysis",
     "usesCredits": "Uses AI credits",
     "quotaExceeded": "AI quota exceeded. Use the skill match % for a free assessment."
+  },
+  "notifications": {
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet",
+    "markAllRead": "Mark all read",
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
   }
 }
