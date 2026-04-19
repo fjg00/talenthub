@@ -4,6 +4,7 @@ import { getProfile } from "@/lib/dal/profiles";
 import { getEmployerStats, getCandidateStats } from "@/lib/dal/applications";
 import { getInterviewsByEmployer, getInterviewsByCandidate } from "@/lib/dal/interviews";
 import { getSavedJobs } from "@/lib/dal/saved-jobs";
+import { getRecommendedJobs } from "@/lib/dal/jobs";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import {
@@ -19,6 +20,7 @@ import {
   Sparkles,
   Heart,
   MapPin,
+  Building2,
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -38,7 +40,17 @@ export default async function DashboardPage() {
     return <EmployerOverview userId={user.id} name={profile.fullName} />;
   }
 
-  return <CandidateOverview userId={user.id} name={profile.fullName} />;
+  const candidateSkills = profile.candidateProfile?.skills ?? [];
+  const candidateLocation = profile.candidateProfile?.location;
+
+  return (
+    <CandidateOverview
+      userId={user.id}
+      name={profile.fullName}
+      candidateSkills={candidateSkills}
+      candidateLocation={candidateLocation}
+    />
+  );
 }
 
 // ─── Employer Overview ────────────────────────────────────────────────────────
@@ -217,11 +229,22 @@ async function EmployerOverview({ userId, name }: { userId: string; name: string
 
 // ─── Candidate Overview ───────────────────────────────────────────────────────
 
-async function CandidateOverview({ userId, name }: { userId: string; name: string }) {
-  const [stats, interviews, saved] = await Promise.all([
+async function CandidateOverview({
+  userId,
+  name,
+  candidateSkills,
+  candidateLocation,
+}: {
+  userId: string;
+  name: string;
+  candidateSkills: string[];
+  candidateLocation: string | null | undefined;
+}) {
+  const [stats, interviews, saved, recommendedJobs] = await Promise.all([
     getCandidateStats(userId),
     getInterviewsByCandidate(userId),
     getSavedJobs(userId),
+    getRecommendedJobs(candidateSkills, candidateLocation),
   ]);
   const t = await getTranslations("dashboard");
 
@@ -360,6 +383,93 @@ async function CandidateOverview({ userId, name }: { userId: string; name: strin
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recommended Jobs */}
+      {recommendedJobs.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">
+                {t("recommendedJobs")}
+              </h2>
+            </div>
+            <Link
+              href="/dashboard/jobs?sort=match"
+              className="text-sm text-primary hover:underline"
+            >
+              {t("viewAll")} →
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {recommendedJobs.slice(0, 4).map(({ job, matchPct, matchedSkills }) => {
+              const companyName =
+                job.employer.employerProfile?.companyName ??
+                job.employer.fullName;
+              const matchColor =
+                matchPct >= 75
+                  ? "text-success bg-success/10"
+                  : matchPct >= 40
+                    ? "text-amber-600 bg-amber-500/10 dark:text-amber-400"
+                    : "text-muted-foreground bg-accent";
+
+              return (
+                <Link
+                  key={job.id}
+                  href={`/dashboard/jobs/${job.id}`}
+                  className="group rounded-xl border border-border p-4 transition-colors hover:bg-accent/50"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground group-hover:text-primary">
+                        {job.title}
+                      </p>
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <Building2 className="h-3 w-3 shrink-0" />
+                        {companyName}
+                      </p>
+                      {job.location && (
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {job.location}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${matchColor}`}
+                    >
+                      {matchPct}%
+                    </span>
+                  </div>
+                  {matchedSkills.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {matchedSkills.slice(0, 3).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {matchedSkills.length > 3 && (
+                        <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-muted-foreground">
+                          +{matchedSkills.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {matchPct >= 60 && (
+                    <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-success">
+                      <TrendingUp className="h-3 w-3" />
+                      {t("strongMatch")}
+                    </div>
+                  )}
                 </Link>
               );
             })}

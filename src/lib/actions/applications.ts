@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { applications, jobs, candidateProfiles, employerProfiles, profiles } from "@/db/schema";
+import { applications, applicationStatusHistory, jobs, candidateProfiles, employerProfiles, profiles } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { interviews } from "@/db/schema";
 import { generateInterviewQuestions } from "@/lib/ai/interview";
@@ -16,6 +16,7 @@ import {
   interviewRequestedEmail,
   hiredEmail,
 } from "@/lib/email-templates";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export type ApplicationState = {
   error?: string;
@@ -38,6 +39,9 @@ export async function applyToJobAction(
 
   if (!user) return { error: "Unauthorized" };
 
+  const rl = await checkRateLimit("applyToJob", user.id);
+  if (!rl.allowed) return { error: "tooManyAttempts" };
+
   const parsed = applySchema.safeParse({
     jobId: formData.get("jobId"),
     coverLetter: formData.get("coverLetter") ?? undefined,
@@ -56,13 +60,30 @@ export async function applyToJobAction(
     where: eq(candidateProfiles.userId, user.id),
   });
 
+  // Onboarding gate: require either a CV *or* a minimum profile (headline
+  // + some skills) before the candidate can apply. This keeps match scores
+  // meaningful and prevents employers from getting empty applications.
+  const hasCv = Boolean(candidateProfile?.cvUrl);
+  const hasHeadline = Boolean(candidateProfile?.headline?.trim());
+  const hasSkills =
+    Array.isArray(candidateProfile?.skills) &&
+    candidateProfile.skills.length >= 3;
+  if (!hasCv && !(hasHeadline && hasSkills)) {
+    return { error: "profileIncomplete" };
+  }
+
+  let insertedAppId: string | null = null;
   try {
-    await db.insert(applications).values({
-      jobId: parsed.data.jobId,
-      candidateId: user.id,
-      coverLetter: parsed.data.coverLetter,
-      cvUrl: candidateProfile?.cvUrl ?? null,
-    });
+    const [inserted] = await db
+      .insert(applications)
+      .values({
+        jobId: parsed.data.jobId,
+        candidateId: user.id,
+        coverLetter: parsed.data.coverLetter,
+        cvUrl: candidateProfile?.cvUrl ?? null,
+      })
+      .returning({ id: applications.id });
+    insertedAppId = inserted.id;
   } catch (err: unknown) {
     // Unique constraint violation = already applied
     if (
@@ -72,6 +93,18 @@ export async function applyToJobAction(
       return { error: "alreadyApplied" };
     }
     return { error: "applyFailed" };
+  }
+
+  // Seed the status-history timeline with the initial "applied" entry.
+  if (insertedAppId) {
+    await db
+      .insert(applicationStatusHistory)
+      .values({
+        applicationId: insertedAppId,
+        status: "applied",
+        changedBy: user.id,
+      })
+      .catch(() => {});
   }
 
   // Notify employer of new application
@@ -149,6 +182,16 @@ export async function updateApplicationStatusAction(
     return { error: "Unauthorized" };
   }
 
+  // Guard: `hired` is terminal. Once hired, status can't change — it would
+  // invalidate the auto-reject + auto-close side effects and corrupt the
+  // candidate's timeline.
+  if (application.status === "hired") {
+    return { error: "statusLocked" };
+  }
+
+  // Only record history when the status actually changes
+  const statusChanged = application.status !== parsed.data.status;
+
   await db
     .update(applications)
     .set({
@@ -157,8 +200,38 @@ export async function updateApplicationStatusAction(
     })
     .where(eq(applications.id, parsed.data.applicationId));
 
+  if (statusChanged) {
+    await db
+      .insert(applicationStatusHistory)
+      .values({
+        applicationId: parsed.data.applicationId,
+        status: parsed.data.status,
+        changedBy: user.id,
+      })
+      .catch(() => {});
+  }
+
   // Auto-reject all other applicants when someone is hired
   if (parsed.data.status === "hired") {
+    // Find who we'll auto-reject — include email + candidateId so we can
+    // notify them after the bulk update.
+    const toAutoReject = await db
+      .select({
+        id: applications.id,
+        candidateId: applications.candidateId,
+        email: profiles.email,
+      })
+      .from(applications)
+      .innerJoin(profiles, eq(profiles.id, applications.candidateId))
+      .where(
+        and(
+          eq(applications.jobId, application.jobId),
+          ne(applications.id, parsed.data.applicationId),
+          ne(applications.status, "hired"),
+          ne(applications.status, "rejected")
+        )
+      );
+
     await db
       .update(applications)
       .set({ status: "rejected", updatedAt: new Date() })
@@ -169,6 +242,45 @@ export async function updateApplicationStatusAction(
           ne(applications.status, "hired")
         )
       );
+
+    if (toAutoReject.length > 0) {
+      await db
+        .insert(applicationStatusHistory)
+        .values(
+          toAutoReject.map((a) => ({
+            applicationId: a.id,
+            status: "rejected" as const,
+            note: "Auto-rejected: position filled",
+            changedBy: user.id,
+          }))
+        )
+        .catch(() => {});
+
+      // Notify + email each auto-rejected candidate (fire-and-forget).
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      for (const r of toAutoReject) {
+        createNotification({
+          userId: r.candidateId,
+          type: "status_change",
+          title: "Application Update",
+          message: `The position for ${application.job.title} has been filled.`,
+          relatedUrl: "/dashboard/applications",
+        }).catch(() => {});
+
+        if (r.email) {
+          sendEmail({
+            to: r.email,
+            subject: `Application update: ${application.job.title}`,
+            html: statusChangeEmail(
+              application.job.title,
+              "rejected",
+              `${siteUrl}/dashboard/applications`
+            ),
+          }).catch(() => {});
+        }
+      }
+    }
     // Auto-close the job
     await db
       .update(jobs)
@@ -276,5 +388,46 @@ export async function updateApplicationStatusAction(
   revalidatePath("/dashboard/applications");
   revalidatePath("/dashboard/candidates");
   revalidatePath("/dashboard/interviews");
+  return { success: true };
+}
+
+// Candidate: withdraw their own application.
+// Deletes the row entirely so the candidate can re-apply later. FK cascade
+// handles status-history rows. Employer gets a notification explaining.
+export async function withdrawApplicationAction(
+  applicationId: string
+): Promise<ApplicationState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const application = await db.query.applications.findFirst({
+    where: eq(applications.id, applicationId),
+    with: { job: true },
+  });
+  if (!application || application.candidateId !== user.id)
+    return { error: "Unauthorized" };
+
+  // Can't withdraw after a final decision has been made.
+  if (application.status === "hired" || application.status === "rejected")
+    return { error: "cannotWithdraw" };
+
+  await db.delete(applications).where(eq(applications.id, applicationId));
+
+  // Notify employer
+  createNotification({
+    userId: application.job.employerId,
+    type: "status_change",
+    title: "Candidate Withdrew",
+    message: `A candidate withdrew their application for ${application.job.title}`,
+    relatedUrl: `/dashboard/jobs/${application.jobId}`,
+  }).catch(() => {});
+
+  revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/jobs");
+  revalidatePath(`/dashboard/jobs/${application.jobId}`);
+  revalidatePath("/dashboard/candidates");
   return { success: true };
 }

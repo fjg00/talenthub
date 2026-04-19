@@ -5,8 +5,10 @@ import { motion } from "framer-motion";
 import { User, FileText, Video, Target } from "lucide-react";
 import { ApplicationStatusBadge } from "./status-badge";
 import { updateApplicationStatusAction } from "@/lib/actions/applications";
-import { useTransition } from "react";
+import { useTransition, useState, useCallback } from "react";
 import { InterviewRequestButton } from "./interview-request-button";
+import { BulkActionsToolbar } from "./bulk-actions-toolbar";
+import { CandidateNotesButton } from "./candidate-notes";
 
 interface Applicant {
   id: string;
@@ -40,8 +42,51 @@ const statuses = [
   "hired",
 ] as const;
 
-export function ApplicantList({ applicants, jobId }: { applicants: Applicant[]; jobId: string }) {
+export function ApplicantList({
+  applicants,
+  jobId,
+  noteCounts,
+}: {
+  applicants: Applicant[];
+  jobId: string;
+  noteCounts?: Record<string, number>;
+}) {
   const t = useTranslations("applications");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [optimisticApps, setOptimisticApps] = useState(applicants);
+
+  const allIds = optimisticApps.map((a) => a.id);
+  const allSelected = optimisticApps.length > 0 && selectedIds.length === optimisticApps.length;
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) =>
+      prev.length === allIds.length ? [] : [...allIds]
+    );
+  }, [allIds]);
+
+  const handleOptimisticUpdate = useCallback((ids: string[], status: string) => {
+    setOptimisticApps((prev) =>
+      prev.map((a) => (ids.includes(a.id) ? { ...a, status } : a))
+    );
+  }, []);
+
+  const handleRevert = useCallback(
+    (ids: string[], previousStatuses: Map<string, string>) => {
+      setOptimisticApps((prev) =>
+        prev.map((a) => {
+          const prevStatus = previousStatuses.get(a.id);
+          return prevStatus ? { ...a, status: prevStatus } : a;
+        })
+      );
+    },
+    []
+  );
 
   if (applicants.length === 0) {
     return (
@@ -56,11 +101,40 @@ export function ApplicantList({ applicants, jobId }: { applicants: Applicant[]; 
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-foreground">
-        {t("title")} ({applicants.length})
-      </h2>
-      {applicants.map((app, i) => (
-        <ApplicantCard key={app.id} applicant={app} index={i} jobId={jobId} />
+      <div className="flex items-center gap-3">
+        {/* Select all checkbox */}
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAll}
+            className="h-4 w-4 rounded border-border text-primary accent-primary"
+          />
+          <span className="text-xs text-muted-foreground">{t("bulkSelectAll")}</span>
+        </label>
+        <h2 className="text-lg font-semibold text-foreground">
+          {t("title")} ({optimisticApps.length})
+        </h2>
+      </div>
+
+      <BulkActionsToolbar
+        selectedIds={selectedIds}
+        onClearSelection={() => setSelectedIds([])}
+        onOptimisticUpdate={handleOptimisticUpdate}
+        onRevert={handleRevert}
+        applicants={optimisticApps}
+      />
+
+      {optimisticApps.map((app, i) => (
+        <ApplicantCard
+          key={app.id}
+          applicant={app}
+          index={i}
+          jobId={jobId}
+          isSelected={selectedIds.includes(app.id)}
+          onToggleSelect={() => toggleSelect(app.id)}
+          noteCount={noteCounts?.[app.candidateId] ?? 0}
+        />
       ))}
     </div>
   );
@@ -70,10 +144,16 @@ function ApplicantCard({
   applicant,
   index,
   jobId,
+  isSelected,
+  onToggleSelect,
+  noteCount,
 }: {
   applicant: Applicant;
   index: number;
   jobId: string;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  noteCount: number;
 }) {
   const t = useTranslations("applications");
   const [isPending, startTransition] = useTransition();
@@ -93,9 +173,21 @@ function ApplicantCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="rounded-2xl border border-border bg-card p-5"
+      className={`rounded-2xl border bg-card p-5 transition-colors ${
+        isSelected
+          ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
+          : "border-border"
+      }`}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="mt-1 h-4 w-4 shrink-0 rounded border-border text-primary accent-primary cursor-pointer"
+        />
+
         <div className="min-w-0 flex-1">
           {/* Name + match badge + status */}
           <div className="flex items-center gap-2">
@@ -186,16 +278,24 @@ function ApplicantCard({
             </a>
           )}
 
-          {/* Status dropdown */}
+          {/* Notes */}
+          <CandidateNotesButton
+            candidateId={applicant.candidateId}
+            candidateName={applicant.candidate.fullName}
+            initialCount={noteCount}
+          />
+
+          {/* Status dropdown — locked once hired */}
           <select
             value={applicant.status}
-            disabled={isPending}
+            disabled={isPending || applicant.status === "hired"}
+            title={applicant.status === "hired" ? t("statusLocked") : undefined}
             onChange={(e) =>
               startTransition(async () => {
                 await updateApplicationStatusAction(applicant.id, e.target.value);
               })
             }
-            className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
+            className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             {statuses.map((s) => (
               <option key={s} value={s}>

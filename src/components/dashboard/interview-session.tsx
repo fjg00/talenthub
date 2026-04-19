@@ -161,7 +161,14 @@ export function InterviewSession({
             {completed.length} {t("answered")}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-accent">
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={questions.length}
+          aria-valuenow={completed.length}
+          aria-label={t("answered")}
+          className="h-2 overflow-hidden rounded-full bg-accent"
+        >
           <div
             className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all"
             style={{
@@ -201,14 +208,26 @@ export function InterviewSession({
           <p className="mt-2 text-sm font-medium text-success">
             {t("responseRecorded")}
           </p>
-          {currentQuestion < questions.length - 1 && (
+          <div className="mt-3 flex items-center justify-center gap-4">
             <button
-              onClick={() => setCurrentQuestion((p) => p + 1)}
-              className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              onClick={() =>
+                setCompleted((prev) =>
+                  prev.filter((i) => i !== currentQuestion)
+                )
+              }
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
             >
-              {t("nextQuestion")} <ChevronRight className="h-4 w-4" />
+              {t("reRecord")}
             </button>
-          )}
+            {currentQuestion < questions.length - 1 && (
+              <button
+                onClick={() => setCurrentQuestion((p) => p + 1)}
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                {t("nextQuestion")} <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <VideoRecorder onComplete={handleRecordingComplete} />

@@ -4,16 +4,17 @@ import { getProfile } from "@/lib/dal/profiles";
 import { getEmployerStats } from "@/lib/dal/applications";
 import { getJobsByEmployer } from "@/lib/dal/jobs";
 import { getInterviewsByEmployer } from "@/lib/dal/interviews";
+import { getPipelineAnalytics } from "@/lib/dal/pipeline-analytics";
 import { getTranslations } from "next-intl/server";
 import {
-  BarChart3,
-  Briefcase,
   Users,
   Video,
   TrendingUp,
   Target,
   Clock,
   Eye,
+  TrendingDown,
+  CalendarDays,
 } from "lucide-react";
 import { formatViews } from "@/lib/utils/format-views";
 
@@ -28,10 +29,11 @@ export default async function AnalyticsPage() {
   const profile = await getProfile(user.id);
   if (!profile || profile.role !== "employer") redirect("/dashboard");
 
-  const [stats, employerJobs, interviews] = await Promise.all([
+  const [stats, employerJobs, interviews, pipeline] = await Promise.all([
     getEmployerStats(user.id),
     getJobsByEmployer(user.id),
     getInterviewsByEmployer(user.id),
+    getPipelineAnalytics(user.id),
   ]);
   const t = await getTranslations("analytics");
 
@@ -167,6 +169,180 @@ export default async function AnalyticsPage() {
           })}
         </div>
       </div>
+
+      {/* Pipeline Conversion Funnel */}
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="mb-1 text-lg font-semibold text-foreground">
+          {t("conversionFunnel")}
+        </h2>
+        <p className="mb-5 text-sm text-muted-foreground">
+          {t("conversionFunnelDesc")}
+        </p>
+        <div className="space-y-2">
+          {pipeline.stageFunnel.map((step, i) => {
+            const prev = i > 0 ? pipeline.stageFunnel[i - 1] : null;
+            const dropoff =
+              prev && prev.reached > 0
+                ? Math.round(((prev.reached - step.reached) / prev.reached) * 100)
+                : 0;
+            return (
+              <div key={step.stage} className="flex items-center gap-3">
+                <span className="w-28 text-sm capitalize text-muted-foreground">
+                  {t(step.stage as "applied")}
+                </span>
+                <div className="flex-1">
+                  <div className="h-7 overflow-hidden rounded-lg bg-accent">
+                    <div
+                      className="flex h-full items-center rounded-lg bg-primary px-2"
+                      style={{ width: `${Math.max(step.rate * 100, 3)}%` }}
+                    >
+                      {step.reached > 0 && (
+                        <span className="text-xs font-medium text-primary-foreground">
+                          {step.reached}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <span className="w-16 text-end text-sm font-medium text-foreground">
+                  {Math.round(step.rate * 100)}%
+                </span>
+                <span className="flex w-16 items-center justify-end gap-1 text-xs text-error">
+                  {prev && dropoff > 0 ? (
+                    <>
+                      <TrendingDown className="h-3 w-3" />-{dropoff}%
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Time to Hire + Stage Durations */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="inline-flex rounded-xl bg-primary/10 p-2.5">
+            <Clock className="h-5 w-5 text-primary" />
+          </div>
+          <h2 className="mt-3 text-lg font-semibold text-foreground">
+            {t("timeToHire")}
+          </h2>
+          {pipeline.timeToHire.medianDays === null ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("timeToHireEmpty")}
+            </p>
+          ) : (
+            <>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-foreground">
+                  {pipeline.timeToHire.medianDays}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {t("daysMedian")}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("avgOverSample", {
+                  avg: pipeline.timeToHire.avgDays ?? 0,
+                  sample: pipeline.timeToHire.sample,
+                })}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">
+            {t("avgStageDuration")}
+          </h2>
+          <div className="space-y-2">
+            {pipeline.stageDurations.map((s) => (
+              <div
+                key={s.stage}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="text-muted-foreground">{s.stage}</span>
+                <span className="font-medium text-foreground">
+                  {s.avgDays === null
+                    ? "—"
+                    : t("daysValue", { days: s.avgDays })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 30-Day Applications Trend */}
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="mb-5 flex items-center gap-2">
+          <CalendarDays className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">
+            {t("applicationsTrend")}
+          </h2>
+        </div>
+        {(() => {
+          const maxCount = Math.max(...pipeline.trend.map((d) => d.count), 1);
+          const total = pipeline.trend.reduce((a, b) => a + b.count, 0);
+          return (
+            <>
+              <div className="flex items-end gap-1 h-32">
+                {pipeline.trend.map((d) => (
+                  <div
+                    key={d.date}
+                    className="flex-1 rounded-t bg-primary/70 hover:bg-primary transition-colors"
+                    style={{
+                      height: `${Math.max((d.count / maxCount) * 100, 2)}%`,
+                    }}
+                    title={`${d.date}: ${d.count}`}
+                  />
+                ))}
+              </div>
+              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
+                <span>{pipeline.trend[0]?.date}</span>
+                <span>
+                  {t("trendTotal", { count: total })}
+                </span>
+                <span>{pipeline.trend[pipeline.trend.length - 1]?.date}</span>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
+      {/* Top Converting Jobs */}
+      {pipeline.topConvertingJobs.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="mb-5 text-lg font-semibold text-foreground">
+            {t("topConverting")}
+          </h2>
+          <div className="space-y-3">
+            {pipeline.topConvertingJobs.map((j) => (
+              <div
+                key={j.jobId}
+                className="flex items-center justify-between rounded-xl border border-border p-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-medium text-foreground">
+                    {j.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {t("hiredOutOf", { hired: j.hired, total: j.applicants })}
+                  </p>
+                </div>
+                <div className="ml-4 flex items-center gap-1 rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {Math.round(j.conversionRate * 100)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Per-Job Breakdown */}
       <div className="rounded-2xl border border-border bg-card p-6">

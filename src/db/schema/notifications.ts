@@ -15,6 +15,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "interview_completed",
   "interview_evaluated",
   "hired",
+  "invite_to_apply",
 ]);
 
 export const notifications = pgTable("notifications", {

@@ -40,7 +40,8 @@ export async function createNotification(data: {
     | "interview_requested"
     | "interview_completed"
     | "interview_evaluated"
-    | "hired";
+    | "hired"
+    | "invite_to_apply";
   title: string;
   message: string;
   relatedUrl?: string;

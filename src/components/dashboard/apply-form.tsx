@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, UserCog } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import {
   applyToJobAction,
   type ApplicationState,
@@ -39,11 +40,25 @@ export function ApplyForm({ jobId, hasApplied }: ApplyFormProps) {
         {tj("apply")}
       </h3>
 
-      {state.error && (
+      {state.error === "profileIncomplete" ? (
+        <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm">
+          <p className="font-medium text-foreground">{t("profileIncomplete")}</p>
+          <p className="mt-1 text-muted-foreground">
+            {t("profileIncompleteDesc")}
+          </p>
+          <Link
+            href="/dashboard/profile"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600"
+          >
+            <UserCog className="h-3.5 w-3.5" />
+            {t("completeProfile")}
+          </Link>
+        </div>
+      ) : state.error ? (
         <div className="mb-4 rounded-xl border border-error/20 bg-error/10 p-3 text-sm text-error">
           {t(state.error)}
         </div>
-      )}
+      ) : null}
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="jobId" value={jobId} />

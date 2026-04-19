@@ -26,6 +26,25 @@ export {
 export { aiCache, aiCacheTypeEnum } from "./ai-cache";
 export { notifications, notificationTypeEnum } from "./notifications";
 export { savedJobs } from "./saved-jobs";
+export { candidateNotes } from "./candidate-notes";
+export { jobTemplates } from "./job-templates";
+export { applicationStatusHistory } from "./application-status-history";
+export { resumes, EMPTY_RESUME } from "./resumes";
+export { jobAlerts, alertFrequencyEnum } from "./job-alerts";
+export {
+  interviewSchedules,
+  interviewScheduleTypeEnum,
+  interviewScheduleStatusEnum,
+} from "./interview-schedules";
+export { rateLimitBuckets } from "./rate-limits";
+export type {
+  ResumeData,
+  ExperienceEntry,
+  EducationEntry,
+  LanguageEntry,
+  CertificationEntry,
+  LinkEntry,
+} from "./resumes";
 export {
   profilesRelations,
   candidateProfilesRelations,
@@ -37,4 +56,8 @@ export {
   aiCacheRelations,
   notificationsRelations,
   savedJobsRelations,
+  candidateNotesRelations,
+  jobTemplatesRelations,
+  applicationStatusHistoryRelations,
+  interviewSchedulesRelations,
 } from "./relations";

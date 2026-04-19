@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
         <span className="text-2xl font-bold text-foreground">TalentHub</span>
       </Link>
-      {children}
+      <main className="w-full flex flex-col items-center">{children}</main>
     </div>
   );
 }

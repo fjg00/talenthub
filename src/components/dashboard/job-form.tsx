@@ -1,13 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, BookmarkPlus, Trash2 } from "lucide-react";
 import {
   createJobAction,
   updateJobAction,
   type JobState,
 } from "@/lib/actions/jobs";
+import {
+  createTemplateAction,
+  deleteTemplateAction,
+} from "@/lib/actions/job-templates";
 
 interface JobData {
   id: string;
@@ -24,15 +28,75 @@ interface JobData {
   status: string;
 }
 
+export interface JobTemplate {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  location: string | null;
+  jobType: string | null;
+  experienceLevel: string | null;
+  skills: string[] | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  currency: string | null;
+}
+
 interface JobFormProps {
   job?: JobData | null;
+  templates?: JobTemplate[];
 }
+
+type FormSeed = {
+  title: string;
+  description: string;
+  location: string;
+  jobType: string;
+  experienceLevel: string;
+  skills: string;
+  salaryMin: string;
+  salaryMax: string;
+  currency: string;
+  deadline: string;
+};
 
 const jobTypes = ["full_time", "part_time", "contract", "remote"] as const;
 const experienceLevels = ["entry", "mid", "senior", "lead"] as const;
 const currencies = ["USD", "SAR", "AED", "QAR", "KWD", "BHD", "OMR", "EGP"] as const;
 
-export function JobForm({ job }: JobFormProps) {
+function seedFromJob(job?: JobData | null): FormSeed {
+  return {
+    title: job?.title ?? "",
+    description: job?.description ?? "",
+    location: job?.location ?? "",
+    jobType: job?.jobType ?? "",
+    experienceLevel: job?.experienceLevel ?? "",
+    skills: job?.skills?.join(", ") ?? "",
+    salaryMin: job?.salaryMin != null ? String(job.salaryMin) : "",
+    salaryMax: job?.salaryMax != null ? String(job.salaryMax) : "",
+    currency: job?.currency ?? "USD",
+    deadline: job?.deadline
+      ? new Date(job.deadline).toISOString().split("T")[0]
+      : "",
+  };
+}
+
+function seedFromTemplate(tpl: JobTemplate): FormSeed {
+  return {
+    title: tpl.title,
+    description: tpl.description,
+    location: tpl.location ?? "",
+    jobType: tpl.jobType ?? "",
+    experienceLevel: tpl.experienceLevel ?? "",
+    skills: tpl.skills?.join(", ") ?? "",
+    salaryMin: tpl.salaryMin != null ? String(tpl.salaryMin) : "",
+    salaryMax: tpl.salaryMax != null ? String(tpl.salaryMax) : "",
+    currency: tpl.currency ?? "USD",
+    deadline: "",
+  };
+}
+
+export function JobForm({ job, templates = [] }: JobFormProps) {
   const t = useTranslations("jobs");
   const isEdit = !!job;
 
@@ -41,11 +105,213 @@ export function JobForm({ job }: JobFormProps) {
     {}
   );
 
+  // Remountable form via key. Seed initialized from job (edit) or empty (new).
+  const [seed, setSeed] = useState<FormSeed>(() => seedFromJob(job));
+  const [formKey, setFormKey] = useState(0);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+
+  const [templateList, setTemplateList] = useState<JobTemplate[]>(templates);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [tplError, setTplError] = useState<string | null>(null);
+  const [isTplPending, startTplTransition] = useTransition();
+
+  const handleSelectTemplate = (id: string) => {
+    setSelectedTemplateId(id);
+    if (!id) return;
+    const tpl = templateList.find((x) => x.id === id);
+    if (!tpl) return;
+    setSeed(seedFromTemplate(tpl));
+    setFormKey((k) => k + 1);
+  };
+
+  const handleSaveTemplate = () => {
+    setTplError(null);
+    const form = document.getElementById("job-form") as HTMLFormElement | null;
+    if (!form) return;
+    const fd = new FormData(form);
+    const name = templateName.trim();
+    if (!name) {
+      setTplError(t("templateNameRequired"));
+      return;
+    }
+    const title = String(fd.get("title") ?? "").trim();
+    const description = String(fd.get("description") ?? "").trim();
+    if (!title || !description) {
+      setTplError(t("templateFieldsRequired"));
+      return;
+    }
+    const skillsRaw = String(fd.get("skills") ?? "");
+    const skills = skillsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const salaryMinStr = String(fd.get("salaryMin") ?? "");
+    const salaryMaxStr = String(fd.get("salaryMax") ?? "");
+    const jobTypeVal = String(fd.get("jobType") ?? "");
+    const expLevelVal = String(fd.get("experienceLevel") ?? "");
+    const locationVal = String(fd.get("location") ?? "").trim();
+    const currencyVal = String(fd.get("currency") ?? "USD");
+
+    type JT = "full_time" | "part_time" | "contract" | "remote";
+    type XL = "entry" | "mid" | "senior" | "lead";
+    type CR =
+      | "USD"
+      | "SAR"
+      | "AED"
+      | "QAR"
+      | "KWD"
+      | "BHD"
+      | "OMR"
+      | "EGP";
+
+    const jobTypeParsed = (
+      jobTypes.includes(jobTypeVal as JT) ? (jobTypeVal as JT) : null
+    ) as JT | null;
+    const expLevelParsed = (
+      experienceLevels.includes(expLevelVal as XL) ? (expLevelVal as XL) : null
+    ) as XL | null;
+    const currencyParsed = (
+      currencies.includes(currencyVal as CR) ? (currencyVal as CR) : "USD"
+    ) as CR;
+
+    startTplTransition(async () => {
+      const res = await createTemplateAction({
+        name,
+        title,
+        description,
+        location: locationVal || null,
+        jobType: jobTypeParsed,
+        experienceLevel: expLevelParsed,
+        skills,
+        salaryMin: salaryMinStr ? Number(salaryMinStr) : null,
+        salaryMax: salaryMaxStr ? Number(salaryMaxStr) : null,
+        currency: currencyParsed,
+      });
+      if (res.error) {
+        setTplError(t("validationError"));
+        return;
+      }
+      if (res.templateId) {
+        setTemplateList((prev) => [
+          {
+            id: res.templateId!,
+            name,
+            title,
+            description,
+            location: locationVal || null,
+            jobType: jobTypeParsed,
+            experienceLevel: expLevelParsed,
+            skills,
+            salaryMin: salaryMinStr ? Number(salaryMinStr) : null,
+            salaryMax: salaryMaxStr ? Number(salaryMaxStr) : null,
+            currency: currencyParsed,
+          },
+          ...prev,
+        ]);
+      }
+      setTemplateName("");
+      setSaveOpen(false);
+    });
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    startTplTransition(async () => {
+      const res = await deleteTemplateAction(id);
+      if (res.success) {
+        setTemplateList((prev) => prev.filter((t) => t.id !== id));
+        if (selectedTemplateId === id) setSelectedTemplateId("");
+      }
+    });
+  };
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-8 text-2xl font-bold text-foreground">
         {isEdit ? t("editJob") : t("createJob")}
       </h1>
+
+      {!isEdit && (
+        <div className="mb-6 rounded-2xl border border-border bg-card p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-foreground">
+              {t("loadFromTemplate")}
+            </label>
+            <button
+              type="button"
+              onClick={() => setSaveOpen((v) => !v)}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+            >
+              <BookmarkPlus className="h-3.5 w-3.5" />
+              {t("saveAsTemplate")}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => handleSelectTemplate(e.target.value)}
+              className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">{t("noTemplate")}</option>
+              {templateList.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>
+                  {tpl.name}
+                </option>
+              ))}
+            </select>
+            {selectedTemplateId && (
+              <button
+                type="button"
+                onClick={() => handleDeleteTemplate(selectedTemplateId)}
+                disabled={isTplPending}
+                aria-label={t("deleteTemplate")}
+                className="rounded-lg border border-border bg-background p-2.5 text-error hover:bg-error/10 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {saveOpen && (
+            <div className="mt-3 space-y-2 rounded-xl border border-border bg-background p-3">
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder={t("templateNamePlaceholder")}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {tplError && (
+                <p className="text-xs text-error">{tplError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSaveOpen(false);
+                    setTplError(null);
+                    setTemplateName("");
+                  }}
+                  className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTemplate}
+                  disabled={isTplPending}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {isTplPending && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  {t("saveTemplate")}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {state.success && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 p-3 text-sm text-success">
@@ -60,7 +326,12 @@ export function JobForm({ job }: JobFormProps) {
         </div>
       )}
 
-      <form action={formAction} className="space-y-6">
+      <form
+        id="job-form"
+        key={formKey}
+        action={formAction}
+        className="space-y-6"
+      >
         {isEdit && <input type="hidden" name="jobId" value={job.id} />}
 
         <div>
@@ -71,7 +342,7 @@ export function JobForm({ job }: JobFormProps) {
             name="title"
             type="text"
             required
-            defaultValue={job?.title ?? ""}
+            defaultValue={seed.title}
             placeholder={t("jobTitlePlaceholder")}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -85,7 +356,7 @@ export function JobForm({ job }: JobFormProps) {
             name="description"
             rows={6}
             required
-            defaultValue={job?.description ?? ""}
+            defaultValue={seed.description}
             placeholder={t("descriptionPlaceholder")}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -98,7 +369,7 @@ export function JobForm({ job }: JobFormProps) {
           <input
             name="location"
             type="text"
-            defaultValue={job?.location ?? ""}
+            defaultValue={seed.location}
             placeholder={t("locationPlaceholder")}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -111,7 +382,7 @@ export function JobForm({ job }: JobFormProps) {
             </label>
             <select
               name="jobType"
-              defaultValue={job?.jobType ?? ""}
+              defaultValue={seed.jobType}
               className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">{t("allTypes")}</option>
@@ -129,7 +400,7 @@ export function JobForm({ job }: JobFormProps) {
             </label>
             <select
               name="experienceLevel"
-              defaultValue={job?.experienceLevel ?? ""}
+              defaultValue={seed.experienceLevel}
               className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">{t("allLevels")}</option>
@@ -149,7 +420,7 @@ export function JobForm({ job }: JobFormProps) {
           <input
             name="skills"
             type="text"
-            defaultValue={job?.skills?.join(", ") ?? ""}
+            defaultValue={seed.skills}
             placeholder={t("skillsPlaceholder")}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -164,7 +435,7 @@ export function JobForm({ job }: JobFormProps) {
               name="salaryMin"
               type="number"
               min={0}
-              defaultValue={job?.salaryMin ?? ""}
+              defaultValue={seed.salaryMin}
               placeholder={t("salaryMin")}
               className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -172,13 +443,13 @@ export function JobForm({ job }: JobFormProps) {
               name="salaryMax"
               type="number"
               min={0}
-              defaultValue={job?.salaryMax ?? ""}
+              defaultValue={seed.salaryMax}
               placeholder={t("salaryMax")}
               className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <select
               name="currency"
-              defaultValue={job?.currency ?? "USD"}
+              defaultValue={seed.currency}
               className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               {currencies.map((c) => (
@@ -197,11 +468,7 @@ export function JobForm({ job }: JobFormProps) {
           <input
             name="deadline"
             type="date"
-            defaultValue={
-              job?.deadline
-                ? new Date(job.deadline).toISOString().split("T")[0]
-                : ""
-            }
+            defaultValue={seed.deadline}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>

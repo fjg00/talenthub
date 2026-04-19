@@ -17,9 +17,12 @@ import {
   Settings,
   BarChart3,
   FileText,
+  FilePen,
+  Bell,
   LogOut,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
 
 const employerLinks = [
@@ -36,6 +39,8 @@ const candidateLinks = [
   { icon: LayoutDashboard, key: "overview", href: "/dashboard" },
   { icon: Briefcase, key: "jobs", href: "/dashboard/jobs" },
   { icon: FileText, key: "applications", href: "/dashboard/applications" },
+  { icon: FilePen, key: "resume", href: "/dashboard/resume" },
+  { icon: Bell, key: "alerts", href: "/dashboard/alerts" },
   { icon: Video, key: "interviews", href: "/dashboard/interviews" },
   { icon: UserCircle, key: "profile", href: "/dashboard/profile" },
   { icon: Settings, key: "settings", href: "/dashboard/settings" },
@@ -53,7 +58,7 @@ interface Notification {
 
 interface DashboardShellProps {
   userName: string;
-  userRole: "candidate" | "employer";
+  userRole: "candidate" | "employer" | "admin";
   notifications: Notification[];
   unreadCount: number;
   children: React.ReactNode;
@@ -63,7 +68,11 @@ export function DashboardShell({ userName, userRole, notifications, unreadCount,
   const t = useTranslations("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const links = userRole === "employer" ? employerLinks : candidateLinks;
+  const baseLinks = userRole === "employer" ? employerLinks : candidateLinks;
+  const links =
+    userRole === "admin"
+      ? [{ icon: Shield, key: "adminPanel", href: "/admin" }, ...employerLinks]
+      : baseLinks;
 
   return (
     <div className="flex min-h-screen">

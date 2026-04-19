@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion } from "framer-motion";
-import { Briefcase, Users, Plus, Trash2, Eye, Archive, RotateCcw } from "lucide-react";
+import { Briefcase, Users, Plus, Trash2, Eye, Archive, RotateCcw, Download } from "lucide-react";
 import { JobStatusBadge } from "./status-badge";
 import { formatViews } from "@/lib/utils/format-views";
 import { toggleJobStatusAction, deleteJobAction } from "@/lib/actions/jobs";
@@ -75,13 +75,22 @@ export function EmployerJobList({ jobs }: { jobs: Job[] }) {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{t("myJobs")}</h1>
-        <Link
-          href="/dashboard/jobs/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          {t("postJob")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/export/jobs"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+          >
+            <Download className="h-4 w-4" />
+            {t("exportCsv")}
+          </a>
+          <Link
+            href="/dashboard/jobs/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            {t("postJob")}
+          </Link>
+        </div>
       </div>
 
       {/* Tabs + Sort */}

@@ -4,6 +4,8 @@ import { getProfile } from "@/lib/dal/profiles";
 import { getInterviewById } from "@/lib/dal/interviews";
 import { InterviewSession } from "@/components/dashboard/interview-session";
 import { InterviewResults } from "@/components/dashboard/interview-results";
+import { InterviewQuestionsEditor } from "@/components/dashboard/interview-questions-editor";
+import { DeleteInterviewButton } from "@/components/dashboard/delete-interview-button";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import {
@@ -12,6 +14,7 @@ import {
   Briefcase,
   ArrowLeft,
   Video,
+  CheckCircle,
 } from "lucide-react";
 
 export default async function InterviewPage({
@@ -41,25 +44,29 @@ export default async function InterviewPage({
   if (profile.role === "candidate") {
     if (interview.candidateId !== user.id) notFound();
 
-    // If completed/evaluated, show results
+    // If completed/evaluated, candidate can no longer access it
     if (
       interview.status === "completed" ||
       interview.status === "evaluated"
     ) {
       return (
-        <div className="mx-auto max-w-3xl space-y-6">
-          <h1 className="text-2xl font-bold text-foreground">
-            {t("interviewFor")} {interview.job.title}
-          </h1>
-          <InterviewResults
-            interviewId={interview.id}
-            questions={questions}
-            responses={interview.responses}
-            overallScore={interview.overallScore}
-            overallFeedback={interview.overallFeedback}
-            overallImprovements={interview.overallImprovements as string[] | null}
-            status={interview.status}
-          />
+        <div className="mx-auto max-w-2xl text-center">
+          <div className="rounded-2xl border border-success/20 bg-success/5 p-8">
+            <CheckCircle className="mx-auto h-12 w-12 text-success" />
+            <h2 className="mt-4 text-xl font-bold text-foreground">
+              {t("interviewComplete")}
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              {t("interviewCompleteDesc")}
+            </p>
+            <Link
+              href="/dashboard/interviews"
+              className="mt-4 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t("title")}
+            </Link>
+          </div>
         </div>
       );
     }
@@ -167,6 +174,25 @@ export default async function InterviewPage({
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Questions editor — only while interview hasn't started */}
+        {interview.status === "pending" && (
+          <InterviewQuestionsEditor
+            interviewId={interview.id}
+            initialQuestions={questions as {
+              text: string;
+              category: "technical" | "behavioral" | "cultural";
+            }[]}
+          />
+        )}
+
+        {/* Delete / cancel interview (employer only) */}
+        <div className="flex justify-end">
+          <DeleteInterviewButton
+            interviewId={interview.id}
+            hasResponses={responseCount > 0}
+          />
         </div>
 
         {/* Interview results with video playback */}

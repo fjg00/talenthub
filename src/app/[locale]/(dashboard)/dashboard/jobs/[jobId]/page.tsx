@@ -1,16 +1,20 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/dal/profiles";
-import { getJobById, getJobWithApplications, hasApplied, incrementJobViews, getSuggestedJobs } from "@/lib/dal/jobs";
+import { getJobById, getJobWithApplications, hasApplied, incrementJobViews, getSuggestedJobs, getRecommendedCandidates } from "@/lib/dal/jobs";
 import { ApplicantList } from "@/components/dashboard/applicant-list";
 import { ApplyForm } from "@/components/dashboard/apply-form";
 import { JobStatusBadge } from "@/components/dashboard/status-badge";
 import { AIJobOptimizer } from "@/components/dashboard/ai-job-optimizer";
 import { getTranslations } from "next-intl/server";
-import { MapPin, Building2, Clock, Coins, Eye } from "lucide-react";
+import { MapPin, Building2, Clock, Coins, Eye, Download } from "lucide-react";
 import { formatViews } from "@/lib/utils/format-views";
 import { JobSuggestionsSidebar } from "@/components/dashboard/job-suggestions";
 import { ApplicantFilters } from "@/components/dashboard/applicant-filters";
+import { RecommendedCandidates } from "@/components/dashboard/recommended-candidates";
+import { KanbanBoard } from "@/components/dashboard/kanban-board";
+import { ViewToggle } from "@/components/dashboard/view-toggle";
+import { getNoteCountsByEmployer } from "@/lib/dal/candidate-notes";
 import { Suspense } from "react";
 
 export default async function JobDetailPage({
@@ -37,8 +41,18 @@ export default async function JobDetailPage({
 
   if (profile.role === "employer") {
     // Employer: show job + applicants
-    const job = await getJobWithApplications(jobId, user.id);
+    const [job, recommendedCandidates, noteCountsMap] = await Promise.all([
+      getJobWithApplications(jobId, user.id),
+      getRecommendedCandidates(jobId),
+      getNoteCountsByEmployer(user.id),
+    ]);
     if (!job) notFound();
+
+    // Convert Map → plain record for client serialization
+    const noteCounts: Record<string, number> = {};
+    for (const [candidateId, count] of noteCountsMap) {
+      noteCounts[candidateId] = count;
+    }
 
     // Apply filters and sorting from searchParams
     let filteredApps = [...job.applications];
@@ -138,11 +152,37 @@ export default async function JobDetailPage({
 
         <AIJobOptimizer jobId={jobId} />
 
-        <Suspense>
-          <ApplicantFilters />
-        </Suspense>
+        <div className="flex items-center justify-between">
+          <Suspense>
+            <ApplicantFilters />
+          </Suspense>
+          <div className="flex items-center gap-2">
+            {job.applications.length > 0 && (
+              <a
+                href={`/api/export/applicants/${jobId}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {t("exportCsv")}
+              </a>
+            )}
+            <Suspense>
+              <ViewToggle />
+            </Suspense>
+          </div>
+        </div>
 
-        <ApplicantList applicants={filteredApps} jobId={jobId} />
+        {searchParams.view === "kanban" ? (
+          <KanbanBoard applicants={job.applications} jobId={jobId} />
+        ) : (
+          <ApplicantList
+            applicants={filteredApps}
+            jobId={jobId}
+            noteCounts={noteCounts}
+          />
+        )}
+
+        <RecommendedCandidates candidates={recommendedCandidates} jobId={jobId} />
       </div>
     );
   }

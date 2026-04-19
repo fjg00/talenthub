@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ApplicationStatusBadge } from "@/components/dashboard/status-badge";
 import { CandidateFilters } from "@/components/dashboard/candidate-filters";
+import { ScheduleInterviewButton } from "@/components/dashboard/schedule-interview-button";
 import { Suspense } from "react";
 
 export default async function CandidatesPage({
@@ -253,6 +254,10 @@ export default async function CandidatesPage({
                           : t("viewInterview")}
                       </Link>
                     ) : null}
+                    <ScheduleInterviewButton
+                      applicationId={apps[0].id}
+                      candidateName={candidate.fullName}
+                    />
                   </div>
                 </div>
               </div>

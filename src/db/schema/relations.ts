@@ -8,6 +8,10 @@ import { interviews, interviewResponses } from "./interviews";
 import { aiCache } from "./ai-cache";
 import { notifications } from "./notifications";
 import { savedJobs } from "./saved-jobs";
+import { candidateNotes } from "./candidate-notes";
+import { jobTemplates } from "./job-templates";
+import { applicationStatusHistory } from "./application-status-history";
+import { interviewSchedules } from "./interview-schedules";
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   candidateProfile: one(candidateProfiles, {
@@ -53,7 +57,7 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   interviews: many(interviews),
 }));
 
-export const applicationsRelations = relations(applications, ({ one }) => ({
+export const applicationsRelations = relations(applications, ({ one, many }) => ({
   job: one(jobs, {
     fields: [applications.jobId],
     references: [jobs.id],
@@ -62,7 +66,22 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
     fields: [applications.candidateId],
     references: [profiles.id],
   }),
+  statusHistory: many(applicationStatusHistory),
 }));
+
+export const applicationStatusHistoryRelations = relations(
+  applicationStatusHistory,
+  ({ one }) => ({
+    application: one(applications, {
+      fields: [applicationStatusHistory.applicationId],
+      references: [applications.id],
+    }),
+    changedByProfile: one(profiles, {
+      fields: [applicationStatusHistory.changedBy],
+      references: [profiles.id],
+    }),
+  })
+);
 
 export const interviewsRelations = relations(interviews, ({ one, many }) => ({
   job: one(jobs, {
@@ -106,3 +125,43 @@ export const savedJobsRelations = relations(savedJobs, ({ one }) => ({
     references: [jobs.id],
   }),
 }));
+
+export const candidateNotesRelations = relations(candidateNotes, ({ one }) => ({
+  employer: one(profiles, {
+    fields: [candidateNotes.employerId],
+    references: [profiles.id],
+    relationName: "noteEmployer",
+  }),
+  candidate: one(profiles, {
+    fields: [candidateNotes.candidateId],
+    references: [profiles.id],
+    relationName: "noteCandidate",
+  }),
+}));
+
+export const jobTemplatesRelations = relations(jobTemplates, ({ one }) => ({
+  employer: one(profiles, {
+    fields: [jobTemplates.employerId],
+    references: [profiles.id],
+  }),
+}));
+
+export const interviewSchedulesRelations = relations(
+  interviewSchedules,
+  ({ one }) => ({
+    application: one(applications, {
+      fields: [interviewSchedules.applicationId],
+      references: [applications.id],
+    }),
+    employer: one(profiles, {
+      fields: [interviewSchedules.employerId],
+      references: [profiles.id],
+      relationName: "scheduleEmployer",
+    }),
+    candidate: one(profiles, {
+      fields: [interviewSchedules.candidateId],
+      references: [profiles.id],
+      relationName: "scheduleCandidate",
+    }),
+  })
+);

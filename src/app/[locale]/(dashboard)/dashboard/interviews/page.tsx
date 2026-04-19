@@ -5,9 +5,14 @@ import {
   getInterviewsByCandidate,
   getInterviewsByEmployer,
 } from "@/lib/dal/interviews";
+import {
+  getSchedulesByCandidate,
+  getSchedulesByEmployer,
+} from "@/lib/dal/interview-schedules";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Video, Sparkles, ChevronRight, Users } from "lucide-react";
+import { Video, Sparkles, ChevronRight, CalendarClock } from "lucide-react";
+import { ScheduledInterviewCard } from "@/components/dashboard/scheduled-interview-card";
 
 export default async function InterviewsPage() {
   const supabase = await createClient();
@@ -32,10 +37,48 @@ export default async function InterviewsPage() {
 // ─── Employer Interviews ──────────────────────────────────────────────────────
 
 async function EmployerInterviews({ userId }: { userId: string }) {
-  const interviews = await getInterviewsByEmployer(userId);
+  const [interviews, schedules] = await Promise.all([
+    getInterviewsByEmployer(userId),
+    getSchedulesByEmployer(userId),
+  ]);
   const t = await getTranslations("interview");
+  const ts = await getTranslations("interviewSchedule");
 
-  if (interviews.length === 0) {
+  const scheduledSection = schedules.length > 0 && (
+    <section className="space-y-3">
+      <div>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          {ts("scheduledInterviews")} ({schedules.length})
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {ts("scheduledInterviewsDesc")}
+        </p>
+      </div>
+      <div className="space-y-3">
+        {schedules.map((s) => (
+          <ScheduledInterviewCard
+            key={s.id}
+            canManage
+            item={{
+              id: s.id,
+              scheduledAt: s.scheduledAt,
+              durationMinutes: s.durationMinutes,
+              type: s.type,
+              status: s.status,
+              location: s.location,
+              meetingUrl: s.meetingUrl,
+              notes: s.notes,
+              heading: s.candidate.fullName,
+              subtitle: s.application.job.title,
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+
+  if (interviews.length === 0 && schedules.length === 0) {
     return (
       <div className="py-16 text-center">
         <Video className="mx-auto h-12 w-12 text-muted-foreground/30" />
@@ -45,6 +88,15 @@ async function EmployerInterviews({ userId }: { userId: string }) {
         <p className="mt-1 text-sm text-muted-foreground">
           {t("noInterviewsEmployerDesc")}
         </p>
+      </div>
+    );
+  }
+
+  if (interviews.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+        {scheduledSection}
       </div>
     );
   }
@@ -71,7 +123,20 @@ async function EmployerInterviews({ userId }: { userId: string }) {
         </span>
       </div>
 
-      {groups.map((group) => (
+      {scheduledSection}
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+            <Sparkles className="h-4 w-4 text-violet-500" />
+            {t("aiInterviewsSection")} ({interviews.length})
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t("aiInterviewsEmployerDesc")}
+          </p>
+        </div>
+
+        {groups.map((group) => (
         <div key={group.label} className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">
             {group.label} ({group.items.length})
@@ -139,7 +204,8 @@ async function EmployerInterviews({ userId }: { userId: string }) {
             );
           })}
         </div>
-      ))}
+        ))}
+      </section>
     </div>
   );
 }
@@ -147,10 +213,54 @@ async function EmployerInterviews({ userId }: { userId: string }) {
 // ─── Candidate Interviews ─────────────────────────────────────────────────────
 
 async function CandidateInterviews({ userId }: { userId: string }) {
-  const interviews = await getInterviewsByCandidate(userId);
+  const [interviews, schedules] = await Promise.all([
+    getInterviewsByCandidate(userId),
+    getSchedulesByCandidate(userId),
+  ]);
   const t = await getTranslations("interview");
+  const ts = await getTranslations("interviewSchedule");
 
-  if (interviews.length === 0) {
+  const scheduledSection = schedules.length > 0 && (
+    <section className="space-y-3">
+      <div>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          {ts("scheduledInterviews")} ({schedules.length})
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {ts("scheduledInterviewsDesc")}
+        </p>
+      </div>
+      <div className="space-y-3">
+        {schedules.map((s) => {
+          const companyName =
+            s.employer?.employerProfile?.companyName ??
+            s.employer?.fullName ??
+            "";
+          return (
+            <ScheduledInterviewCard
+              key={s.id}
+              canManage={false}
+              item={{
+                id: s.id,
+                scheduledAt: s.scheduledAt,
+                durationMinutes: s.durationMinutes,
+                type: s.type,
+                status: s.status,
+                location: s.location,
+                meetingUrl: s.meetingUrl,
+                notes: s.notes,
+                heading: s.application.job.title,
+                subtitle: companyName,
+              }}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  if (interviews.length === 0 && schedules.length === 0) {
     return (
       <div className="py-16 text-center">
         <Video className="mx-auto h-12 w-12 text-muted-foreground/30" />
@@ -167,6 +277,20 @@ async function CandidateInterviews({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+
+      {scheduledSection}
+
+      {interviews.length > 0 && (
+        <section className="space-y-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              {t("aiInterviewsSection")} ({interviews.length})
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t("aiInterviewsCandidateDesc")}
+            </p>
+          </div>
 
       <div className="space-y-3">
         {interviews.map((interview) => {
@@ -219,6 +343,8 @@ async function CandidateInterviews({ userId }: { userId: string }) {
           );
         })}
       </div>
+        </section>
+      )}
     </div>
   );
 }

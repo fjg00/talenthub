@@ -16,6 +16,14 @@ export async function generateInterviewQuestions(
   job: JobContext,
   count: number = 5
 ): Promise<InterviewQuestion[]> {
+  const result = await generateInterviewQuestionsWithMeta(job, count);
+  return result.questions;
+}
+
+export async function generateInterviewQuestionsWithMeta(
+  job: JobContext,
+  count: number = 5
+): Promise<{ questions: InterviewQuestion[]; usedFallback: boolean }> {
   const prompt = `You are an expert technical recruiter creating interview questions for a job position.
 
 JOB:
@@ -50,10 +58,13 @@ Respond with ONLY valid JSON (no markdown, no code fences):
     });
 
     const text = response.text?.trim() ?? "";
-    return JSON.parse(text) as InterviewQuestion[];
+    return {
+      questions: JSON.parse(text) as InterviewQuestion[],
+      usedFallback: false,
+    };
   } catch {
     // Gemini quota exceeded or other failure — return contextual fallback questions
-    return fallbackQuestions;
+    return { questions: fallbackQuestions, usedFallback: true };
   }
 }
 

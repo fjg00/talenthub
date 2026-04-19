@@ -13,6 +13,8 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
+    { href: "/jobs", label: t("browseJobs") },
+    { href: "/companies", label: t("companies") },
     { href: "/for-companies", label: t("forCompanies") },
     { href: "/for-candidates", label: t("forCandidates") },
     { href: "/how-it-works", label: t("howItWorks") },

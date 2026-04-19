@@ -1,8 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod/v4";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { ensureAdminFromEnv } from "@/lib/admin-bootstrap";
 
 export type AuthState = {
   error?: string;
@@ -35,14 +38,24 @@ export async function loginAction(
     return { error: "validationError" };
   }
 
+  // Rate limit by email+ip to slow down credential stuffing
+  const ip = getClientIp(await headers());
+  const rl = await checkRateLimit("login", `${parsed.data.email}:${ip}`);
+  if (!rl.allowed) return { error: "tooManyAttempts" };
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
 
   if (error) {
     return { error: "invalidCredentials" };
+  }
+
+  // Promote to admin if their email is on the ADMIN_EMAILS allowlist.
+  if (data.user) {
+    await ensureAdminFromEnv(data.user.id, data.user.email);
   }
 
   redirect("/dashboard");
@@ -63,6 +76,11 @@ export async function signupAction(
   if (!parsed.success) {
     return { error: "validationError" };
   }
+
+  // Rate limit signups per IP
+  const ip = getClientIp(await headers());
+  const rl = await checkRateLimit("signup", ip);
+  if (!rl.allowed) return { error: "tooManyAttempts" };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({

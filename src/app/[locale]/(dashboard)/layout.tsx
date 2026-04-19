@@ -24,7 +24,10 @@ export default async function DashboardLayout({
   const profile = await getProfile(user.id);
   const userName =
     profile?.fullName || user.user_metadata?.full_name || user.email?.split("@")[0] || "";
-  const userRole = profile?.role ?? "candidate";
+  const userRole = (profile?.role ?? "candidate") as
+    | "candidate"
+    | "employer"
+    | "admin";
 
   const [notificationsList, unreadCount] = await Promise.all([
     getNotifications(user.id, 15),

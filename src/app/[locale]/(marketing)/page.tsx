@@ -14,7 +14,10 @@ import {
   Play,
   Star,
   ChevronRight,
+  Search,
 } from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
+import { useState } from "react";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -140,6 +143,51 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Browse Jobs Section */}
+      <section className="border-t border-border py-20 sm:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mx-auto max-w-2xl text-center"
+          >
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
+              {t("browseJobsTitle")}
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              {t("browseJobsSubtitle")}
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="mx-auto mt-8 max-w-xl"
+          >
+            <LandingJobSearch />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="mt-6 text-center"
+          >
+            <Link
+              href="/jobs"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              {t("browseAllJobs")}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </motion.div>
         </div>
       </section>
@@ -310,5 +358,38 @@ export default function LandingPage() {
         </div>
       </section>
     </>
+  );
+}
+
+function LandingJobSearch() {
+  const t = useTranslations("landing");
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const params = query.trim() ? `?keyword=${encodeURIComponent(query.trim())}` : "";
+    router.push(`/jobs${params}`);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <div className="relative flex-1">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="w-full rounded-xl border border-border bg-background py-3 ps-10 pe-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+      <button
+        type="submit"
+        className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        {t("searchButton")}
+      </button>
+    </form>
   );
 }

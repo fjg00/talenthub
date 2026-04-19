@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { jobs } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export type JobState = {
   error?: string;
@@ -55,6 +56,9 @@ export async function createJobAction(
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Unauthorized" };
+
+  const rl = await checkRateLimit("postJob", user.id);
+  if (!rl.allowed) return { error: "tooManyAttempts" };
 
   const parsed = jobSchema.safeParse(parseJobFormData(formData));
   if (!parsed.success) return { error: "validationError" };
