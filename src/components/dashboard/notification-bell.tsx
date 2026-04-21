@@ -31,6 +31,8 @@ export function NotificationBell({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
+  // Capture "now" once at mount so timeAgo stays a pure function of its input.
+  const [now] = useState(() => Date.now());
 
   // Close on outside click
   useEffect(() => {
@@ -62,9 +64,7 @@ export function NotificationBell({
   }
 
   function timeAgo(date: Date) {
-    const seconds = Math.floor(
-      (Date.now() - new Date(date).getTime()) / 1000
-    );
+    const seconds = Math.floor((now - new Date(date).getTime()) / 1000);
     if (seconds < 60) return t("justNow");
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return t("minutesAgo", { count: minutes });

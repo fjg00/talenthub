@@ -24,13 +24,16 @@ export type AdminStats = {
 export async function getAdminStats(): Promise<AdminStats> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  // Raw sql templates don't know column types, so the postgres-js driver
+  // tries to coerce Date -> Buffer and throws. Pass an ISO string instead.
+  const thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
 
   const [userRow] = await db
     .select({
       total: sql<number>`count(*)::int`,
       candidates: sql<number>`count(*) filter (where ${profiles.role} = 'candidate')::int`,
       employers: sql<number>`count(*) filter (where ${profiles.role} = 'employer')::int`,
-      recent: sql<number>`count(*) filter (where ${profiles.createdAt} >= ${thirtyDaysAgo})::int`,
+      recent: sql<number>`count(*) filter (where ${profiles.createdAt} >= ${thirtyDaysAgoIso})::int`,
     })
     .from(profiles);
 
@@ -38,14 +41,14 @@ export async function getAdminStats(): Promise<AdminStats> {
     .select({
       total: sql<number>`count(*)::int`,
       published: sql<number>`count(*) filter (where ${jobs.status} = 'published')::int`,
-      recent: sql<number>`count(*) filter (where ${jobs.createdAt} >= ${thirtyDaysAgo})::int`,
+      recent: sql<number>`count(*) filter (where ${jobs.createdAt} >= ${thirtyDaysAgoIso})::int`,
     })
     .from(jobs);
 
   const [appRow] = await db
     .select({
       total: sql<number>`count(*)::int`,
-      recent: sql<number>`count(*) filter (where ${applications.createdAt} >= ${thirtyDaysAgo})::int`,
+      recent: sql<number>`count(*) filter (where ${applications.createdAt} >= ${thirtyDaysAgoIso})::int`,
     })
     .from(applications);
 

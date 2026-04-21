@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { profiles, employerProfiles, jobs } from "@/db/schema";
 import { and, eq, desc, sql } from "drizzle-orm";
+import { isUuid } from "@/lib/utils/uuid";
 
 export type CompanySummary = {
   employerId: string;
@@ -88,6 +89,7 @@ export async function getCompaniesWithOpenJobs(opts?: {
  * Public company profile with published jobs.
  */
 export async function getPublicCompany(employerId: string) {
+  if (!isUuid(employerId)) return null;
   const row = await db
     .select({
       employerId: profiles.id,

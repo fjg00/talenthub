@@ -1,8 +1,10 @@
 import { db } from "@/db";
 import { interviews, interviewResponses, jobs } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
+import { isUuid } from "@/lib/utils/uuid";
 
 export async function getInterviewById(interviewId: string) {
+  if (!isUuid(interviewId)) return null;
   return (
     (await db.query.interviews.findFirst({
       where: eq(interviews.id, interviewId),

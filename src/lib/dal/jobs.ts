@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { jobs, applications, candidateProfiles, profiles } from "@/db/schema";
 import { eq, and, ne, ilike, or, sql, desc, count, sum } from "drizzle-orm";
 import { computeSkillMatch } from "@/lib/utils/skill-match";
+import { isUuid } from "@/lib/utils/uuid";
 
 export async function getJobsByEmployer(userId: string) {
   const result = await db.query.jobs.findMany({
@@ -15,6 +16,7 @@ export async function getJobsByEmployer(userId: string) {
 }
 
 export async function getJobById(jobId: string) {
+  if (!isUuid(jobId)) return null;
   const result = await db.query.jobs.findFirst({
     where: eq(jobs.id, jobId),
     with: {

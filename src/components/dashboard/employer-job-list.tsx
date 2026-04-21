@@ -78,6 +78,7 @@ export function EmployerJobList({ jobs }: { jobs: Job[] }) {
         <div className="flex items-center gap-2">
           <a
             href="/api/export/jobs"
+            download
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
           >
             <Download className="h-4 w-4" />
