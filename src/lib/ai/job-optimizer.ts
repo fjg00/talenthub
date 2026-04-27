@@ -1,4 +1,4 @@
-import { getAI, MODEL } from "./gemini";
+import { generateText } from "./claude";
 
 interface JobInput {
   title: string;
@@ -35,16 +35,7 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   "tips": [<up to 3 short tips to improve this job posting>]
 }`;
 
-  const response = await getAI().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      temperature: 0.5,
-      maxOutputTokens: 800,
-    },
-  });
-
-  const text = response.text?.trim() ?? "";
+  const text = await generateText(prompt, { temperature: 0.5, maxTokens: 800 });
 
   try {
     return JSON.parse(text) as JobOptimization;

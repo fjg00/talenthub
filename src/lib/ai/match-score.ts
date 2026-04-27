@@ -1,4 +1,4 @@
-import { getAI, MODEL } from "./gemini";
+import { generateText } from "./claude";
 
 interface CandidateData {
   fullName: string;
@@ -61,21 +61,11 @@ Evaluate the match and respond with ONLY valid JSON (no markdown, no code fences
   "summary": "<1-2 sentence overall assessment>"
 }`;
 
-  const response = await getAI().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      temperature: 0.3,
-      maxOutputTokens: 500,
-    },
-  });
-
-  const text = response.text?.trim() ?? "";
+  const text = await generateText(prompt, { temperature: 0.3, maxTokens: 500 });
 
   try {
     return JSON.parse(text) as MatchResult;
   } catch {
-    // Fallback if JSON parsing fails
     return {
       score: 50,
       strengths: ["Unable to fully evaluate"],

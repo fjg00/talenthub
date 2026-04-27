@@ -1,4 +1,4 @@
-import { getAI, MODEL } from "./gemini";
+import { generateText } from "./claude";
 
 export interface ParsedCV {
   headline: string;
@@ -25,16 +25,7 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   "bio": "<2-3 sentence professional summary based on the CV>"
 }`;
 
-  const response = await getAI().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      temperature: 0.2,
-      maxOutputTokens: 600,
-    },
-  });
-
-  const text = response.text?.trim() ?? "";
+  const text = await generateText(prompt, { temperature: 0.2, maxTokens: 600 });
 
   try {
     return JSON.parse(text) as ParsedCV;

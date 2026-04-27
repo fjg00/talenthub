@@ -1,4 +1,4 @@
-import { getAI, MODEL } from "./gemini";
+import { generateText } from "./claude";
 
 interface JobContext {
   title: string;
@@ -51,19 +51,12 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   ];
 
   try {
-    const response = await getAI().models.generateContent({
-      model: MODEL,
-      contents: prompt,
-      config: { temperature: 0.6, maxOutputTokens: 800 },
-    });
-
-    const text = response.text?.trim() ?? "";
+    const text = await generateText(prompt, { temperature: 0.6, maxTokens: 800 });
     return {
       questions: JSON.parse(text) as InterviewQuestion[],
       usedFallback: false,
     };
   } catch {
-    // Gemini quota exceeded or other failure — return contextual fallback questions
     return { questions: fallbackQuestions, usedFallback: true };
   }
 }
@@ -99,13 +92,7 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   "improvements": [<up to 3 specific, actionable tips for improvement>]
 }`;
 
-  const response = await getAI().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: { temperature: 0.3, maxOutputTokens: 400 },
-  });
-
-  const text = response.text?.trim() ?? "";
+  const text = await generateText(prompt, { temperature: 0.3, maxTokens: 400 });
 
   try {
     return JSON.parse(text) as ResponseEvaluation;
@@ -147,13 +134,7 @@ Provide an overall assessment. Respond with ONLY valid JSON (no markdown, no cod
   "overallImprovements": [<up to 5 key areas where the candidate should improve for future interviews>]
 }`;
 
-  const response = await getAI().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: { temperature: 0.3, maxOutputTokens: 600 },
-  });
-
-  const text = response.text?.trim() ?? "";
+  const text = await generateText(prompt, { temperature: 0.3, maxTokens: 600 });
 
   try {
     return JSON.parse(text) as OverallEvaluation;
